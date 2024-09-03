@@ -11,7 +11,6 @@ source_files() {
             source_files "$item"
         elif [ -f "$item" ] && [[ "$item" == *.bash ]] && [[ "$item" != "$SCRIPT_DIR/function_injector.bash" ]]; then
             source "$item"
-            echo a "Sourced: $item"
         fi
     done
 }
