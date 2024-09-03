@@ -1,0 +1,8 @@
+# Example log file for testing
+# $log log.log
+echo "INFO: This is an info message" > log.log
+echo "WARN: This is a warning message" >> log.log
+echo "ERROR: This is an error message" >> log.log
+echo "DEBUG: This is a debug message" >> log.log
+
+# To test the script, run the following command:
