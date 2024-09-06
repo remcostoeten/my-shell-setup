@@ -24,6 +24,9 @@ source_files() {
 source_files "$function_dir" "functions"
 source_files "$library_dir" "library"
 
+# Source the nvidia_fan_control function
+source "$function_dir/nvidia_fan_control/nvidia_fan_control.bash"
+
 total_sourced=0
 total_failed=0
 
