@@ -1,0 +1,57 @@
+# Speech Recognition Script
+
+This script converts spoken words into text using speech recognition. It listens for speech input, processes it, and copies the recognized text to the clipboard.
+
+## Requirements
+
+- Python 3.x
+- speech_recognition
+- pyperclip
+
+Install the required libraries using:
+
+```bash
+pip install SpeechRecognition pyperclip
+```
+
+## Usage
+
+Run the script from the command line:
+
+```bash
+python script.py rec [nl] [sensitivity]
+```
+
+- `rec`: Required argument to start speech recognition.
+- `nl`: Optional. Use this to switch to Dutch language recognition. Default is English (US).
+- `sensitivity`: Optional. Adjust microphone sensitivity. Default is 1.0, lower values increase sensitivity.
+
+Example:
+
+```bash
+python script.py rec nl 0.8
+```
+
+This will start speech recognition in Dutch with increased microphone sensitivity.
+
+**Note:** Due to a known bug, the script may not stop listening after 5 seconds of silence as intended. To quit the script, press Enter.
+
+![NOSpeech Recognition Script
+This script converts spoken words into text using speech recognition. It listens for speech input, processes it, and copies the recognized text to the clipboard.
+Requirements
+Python 3.x
+speech_recognition
+pyperclip
+Install the required libraries using:
+`pip install SpeechRecognition pyperclip`
+Usage
+Run the script from the command line:
+`python script.py rec [nl] [sensitivity]`
+rec: Required argument to start speech recognition.
+nl: Optional. Use this to switch to Dutch language recognition. Default is English (US).
+sensitivity: Optional. Adjust microphone sensitivity. Default is 1.0, lower values increase sensitivity.
+Example:
+`python script.py rec nl 0.8`
+This will start speech recognition in Dutch with increased microphone sensitivity.
+
+**Note:** Due to a known bug, the script may not stop listening after 5 seconds of silence as intended. To quit the script, press Enter.

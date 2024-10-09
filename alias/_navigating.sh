@@ -1,0 +1,27 @@
+alias .='cd'
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias .....='cd ../../../..'
+alias ......='cd ../../../../..'
+alias .......='cd ../../../../../..'
+alias ........='cd ../../../../../../..'
+alias .........='cd ../../../../../../../..'
+alias ..........='cd ../../../../../../../../..'
+alias ...........='cd ../../../../../../../../../..'
+
+## shortcuts for navigating to directories
+alias d='cd ~/desktop'
+alias downloads='cd ~/downloads'
+alias documents='cd ~/documents'
+alias pictures='cd ~/pictures'
+alias videos='cd ~/videos'
+alias music='cd ~/music'
+alias home='cd ~'
+alias root='cd /'
+
+## development enviormenmts
+alias dev='cd ~/development'
+alias projects='cd ~/projects'
+alias project='cd ~/neon'
+alias nlziet='cd /home/remcostoeten/nlziet-own-gitrepository'

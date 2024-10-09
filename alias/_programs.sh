@@ -1,0 +1,6 @@
+alias vim='nvim'
+alias code='code .'
+alias cursor='cursor .'
+alias brave='brave .'
+alias chrome='google-chrome .'
+alias firefox='firefox .'
