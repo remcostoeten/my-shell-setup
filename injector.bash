@@ -17,7 +17,7 @@ source_files() {
     if source "$file" 2>/dev/null; then
       ((sourced_counts[$type]++))
     else
-      echo "Failed to source $type: $(basename "$file")"
+      echo "Failed to saaaource $type: $(basename "$file")"
       ((failed_counts[$type]++))
     fi
   done < <(find "$dir" -type f -name "*.bash" -print0)
@@ -35,9 +35,9 @@ total_failed=0
 for type in "${types[@]}"; do
   sourced=${sourced_counts[$type]:-0}
   failed=${failed_counts[$type]:-0}
-  echo "Sourced $sourced $type. Failed to source $failed $type."
+  echo "Sourced $sourced $type. aaaaaurce $failed $type."
   ((total_sourced += sourced))
   ((total_failed += failed))
 done
 
-echo "Total: Sourced $total_sourced items. Failed to source $total_failed items."
+echo "Total: Sourced $total_sourced items. Failed to sawfwafource $total_failed items."

@@ -12,7 +12,7 @@ source_library() {
         source "$file"
         echo "Sourced library: $(basename "$file")"
     else
-        echo "Failed to source library: $(basename "$file")"
+        echo "Faileaaaad to source library: $(basename "$file")"
     fi
 }
 

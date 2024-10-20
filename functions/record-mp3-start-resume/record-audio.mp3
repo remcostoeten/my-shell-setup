@@ -1,0 +1,92 @@
+#!/bin/bash
+
+OUTPUT_FILE="output.mp3"
+SEGMENT_TIME=300 # 5 minutes in seconds
+AUDIO_DEVICE="hw:0"
+BITRATE="128k"
+
+# Force color output
+export TERM=xterm-256color
+
+# ANSI color codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+print_help() {
+  clear
+  echo -e "${CYAN}"
+  echo "╔════════════════════════════════╗"
+  echo "║       FFmpeg Recorder          ║"
+  echo "║     ==================         ║"
+  echo "║                                ║"
+  echo -e "║  ${YELLOW}Usage:${CYAN}                     ║"
+  echo -e "║  ${GREEN}./record-audio.mp3${CYAN}          ║"
+  echo "║                                ║"
+  echo -e "║  ${YELLOW}Controls:${CYAN}                   ║"
+  echo -e "║  ${MAGENTA}r${CYAN} - Pause/Resume            ║"
+  echo -e "║  ${MAGENTA}q${CYAN} - Stop and Quit           ║"
+  echo -e "║  ${MAGENTA}h${CYAN} - Show this help          ║"
+  echo "║                                ║"
+  echo -e "║  ${YELLOW}Output:${CYAN}                     ║"
+  echo -e "║  ${GREEN}output_*.mp3${CYAN}                ║"
+  echo "║                                ║"
+  echo "║     Press any key              ║"
+  echo "║     to continue...             ║"
+  echo "║                                ║"
+  echo "╚════════════════════════════════╝"
+  echo -e "${NC}"
+  read -n 1 -s
+}
+
+start_recording() {
+  ffmpeg -f alsa -i $AUDIO_DEVICE -acodec libmp3lame -b:a $BITRATE -f segment -segment_time $SEGMENT_TIME -reset_timestamps 1 -segment_format mp3 "${OUTPUT_FILE}_%03d.mp3" &
+  echo $! >/tmp/ffmpeg_pid
+  echo -e "${GREEN}Recording started.${NC}"
+  echo -e "Press '${MAGENTA}r${NC}' to pause/resume, '${MAGENTA}q${NC}' to quit, '${MAGENTA}h${NC}' for help."
+}
+
+stop_recording() {
+  if [ -f /tmp/ffmpeg_pid ]; then
+    kill $(cat /tmp/ffmpeg_pid)
+    rm /tmp/ffmpeg_pid
+    echo -e "${RED}Recording stopped.${NC}"
+    exit 0
+  fi
+}
+
+toggle_pause() {
+  if [ -f /tmp/ffmpeg_pid ]; then
+    pid=$(cat /tmp/ffmpeg_pid)
+    if kill -0 $pid 2>/dev/null; then
+      if [ -f /tmp/ffmpeg_paused ]; then
+        kill -CONT $pid
+        rm /tmp/ffmpeg_paused
+        echo -e "${GREEN}Recording resumed.${NC}"
+      else
+        kill -STOP $pid
+        touch /tmp/ffmpeg_paused
+        echo -e "${YELLOW}Recording paused.${NC}"
+      fi
+    fi
+  fi
+}
+
+print_help
+start_recording
+
+while true; do
+  read -n 1 -s key
+  case $key in
+  r | R) toggle_pause ;;
+  q | Q) stop_recording ;;
+  h | H)
+    print_help
+    start_recording
+    ;;
+  esac
+done
