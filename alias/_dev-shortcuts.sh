@@ -10,4 +10,3 @@ alias rmall='rm -rf node_modules && rm -rf package-lock.json && rm -rf pnpm-lock
 alias rebuild='rmall && p && p install && p run build'
 
 alias restart='rmall && p && p install && p run dev'
-
