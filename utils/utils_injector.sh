@@ -8,6 +8,6 @@ fi
 # fi
 
 
-
-source /home/remcostoeten/projects/zsh-setup/utils/_print-current-path.sh
 source /home/remcostoeten/projects/zsh-setup/utils/_restart-dev.sh
+source /home/remcostoeten/projects/zsh-setup/utils/_print-current-path.sh
+source ./_open-postgres.sh

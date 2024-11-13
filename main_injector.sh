@@ -16,10 +16,12 @@ if ! source /home/remcostoeten/projects/zsh-setup/alias/alias_injector.sh; then
   handle_error 1 "Failed to source alias_injector.sh"
 fi
 
+source /home/remcostoeten/projects/zsh-setup/packages/package-injector.sh
+
 # Initialize all utils
-if ! source /home/remcostoeten/projects/zsh-setup/utils/utils_injector.sh; then
-  handle_error 2 "Failed to source utils_injector.sh"
-fi
+#if ! source /home/remcostoeten/projects/zsh-setup/utils/utils_injector.sh; then
+# handle_error 2 "Failed to source utils_injector.sh"
+# fi
 
 # Initialize all plugins
 plugins=(
