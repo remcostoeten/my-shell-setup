@@ -1,0 +1,1 @@
+source "/home/remcostoeten/projects/zsh-setup/scripts/cz.sh"

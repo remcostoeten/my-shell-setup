@@ -1,13 +1,19 @@
-alias kit='drizzle-kit'
+#!/bin/bash
 
-alias migrate='pnpm drizzle-kit migrate'
-alias gen='pnpm drizzle-kit generate'
-alias studio='pnpm drizzle-kit studio'
-alias pushdb='pnpm drizzle-kit push'
+# Base commands
+DRIZZLE_CMD="pnpm drizzle-kit"
+SCRIPTS_PATH="./scripts"
 
-## Old PG syntax
-alias genpg='pnpm drizzle-kit generate:pg'
-alias pushpg='pnpm drizzle-kit push:pg'
+# Core Drizzle aliases
+alias d="${DRIZZLE_CMD}"
+alias migrate="${DRIZZLE_CMD} migrate"
+alias gen="${DRIZZLE_CMD} generate"
+alias studio="${DRIZZLE_CMD} studio"
+alias pushdb="${DRIZZLE_CMD} push"
 
-## Drop all PG drop_all_tables
-alias dropalltables='pnpm drizzle-kit exec -f ./scripts/drop_all_tables.sql'
+# PostgreSQL specific aliases
+alias genpg="${DRIZZLE_CMD} generate:pg"
+alias pushpg="${DRIZZLE_CMD} push:pg"
+
+# Database management
+alias dropalltables="${DRIZZLE_CMD} exec -f ${SCRIPTS_PATH}/drop_all_tables.sql"
