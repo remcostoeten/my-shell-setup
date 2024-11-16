@@ -72,4 +72,5 @@ search() {
 }
 
 # Add new alias
-alias cz='git add .  ;search --cz'
+alias cz='search --cz'
+

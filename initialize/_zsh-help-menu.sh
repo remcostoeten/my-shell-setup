@@ -1,120 +1,177 @@
 #!/bin/bash
 
+# Define colors
+declare -A colors=(
+    ["RED"]='\033[0;31m'
+    ["GREEN"]='\033[0;32m'
+    ["YELLOW"]='\033[0;33m'
+    ["BLUE"]='\033[0;34m'
+    ["PURPLE"]='\033[0;35m'
+    ["CYAN"]='\033[0;36m'
+    ["ORANGE"]='\033[38;5;208m'
+    ["PINK"]='\033[38;5;206m'
+    ["LIME"]='\033[38;5;118m'
+    ["RESET"]='\033[0m'
+)
+
+# Function to create rainbow text
+rainbow_text() {
+    local text="$1"
+    local -a rainbow_colors
+    rainbow_colors=(
+        "${colors[RED]}"
+        "${colors[ORANGE]}"
+        "${colors[YELLOW]}"
+        "${colors[GREEN]}"
+        "${colors[BLUE]}"
+        "${colors[PURPLE]}"
+        "${colors[PINK]}"
+    )
+    
+    local length=${#text}
+    for ((i = 0; i < length; i++)); do
+        local color_index=$((i % ${#rainbow_colors[@]}))
+        echo -n "${rainbow_colors[$color_index]}${text:$i:1}"
+    done
+    echo -e "${colors[RESET]}"
+}
+
 # Function to display help menu
 display_help_menu() {
-    echo -e "${colors[BLUE]}╔════════════════════════════════════════════════════════════════╗${colors[RESET]}"
-    echo -e "${colors[BLUE]}║                   ZSH Configuration Help                       ║${colors[RESET]}"
-    echo -e "${colors[BLUE]}╚════════════════════════════════════════════════════════════════╝${colors[RESET]}"
-    echo -e "${colors[GREEN]}Usage:${colors[RESET]}"
-    echo -e "  ${colors[YELLOW]}zshhelp${colors[RESET]} - Display this help menu"
-    echo -e "  ${colors[YELLOW]}help${colors[RESET]} - Display this help menu"
-    echo -e "${colors[GREEN]}Categories:${colors[RESET]}"
-    echo -e "  ${colors[YELLOW]}git${colors[RESET]} - Git commands and aliases"
-    echo -e "  ${colors[YELLOW]}nvm${colors[RESET]} - Node Version Manager commands"
-    echo -e "  ${colors[YELLOW]}aliases${colors[RESET]} - Custom aliases"
-    echo -e "  ${colors[YELLOW]}colorize${colors[RESET]} - Colorize output"
-    echo -e "  ${colors[YELLOW]}tasks${colors[RESET]} - Task management commands"
-    echo -e "  ${colors[YELLOW]}search${colors[RESET]} - Search commands and aliases"
-    echo -e "${colors[GREEN]}Examples:${colors[RESET]}"
-    echo -e "  ${colors[YELLOW]}zshhelp git${colors[RESET]} - Display help for Git commands"
-    echo -e "  ${colors[YELLOW]}zshhelp nvm${colors[RESET]} - Display help for NVM commands"
-    echo -e "  ${colors[YELLOW]}zshhelp aliases${colors[RESET]} - Display help for custom aliases"
-    echo -e "  ${colors[YELLOW]}zshhelp colorize${colors[RESET]} - Display help for colorize output"
-    echo -e "  ${colors[YELLOW]}zshhelp tasks${colors[RESET]} - Display help for task management"
-    echo -e "  ${colors[YELLOW]}zshhelp search${colors[RESET]} - Display help for search commands"
+    echo -e "\n${colors[BLUE]}╔══════════════════════════════════════════════════════════════════════════╗${colors[RESET]}"
+    rainbow_text "                           ZSH Configuration Help                              "
+    echo -e "${colors[BLUE]}╚══════════════════════════════════════════════════════════════════════════╝${colors[RESET]}"
+    
+    echo -e "\n${colors[LIME]}Usage:${colors[RESET]}"
+    echo -e "  ${colors[CYAN]}zshhelp${colors[RESET]} - Display this help menu"
+    echo -e "  ${colors[CYAN]}help${colors[RESET]} - Display this help menu"
+    
+    echo -e "\n${colors[LIME]}Categories:${colors[RESET]}"
+    echo -e "  ${colors[PINK]}help git${colors[RESET]}      - Git commands and aliases"
+    echo -e "  ${colors[ORANGE]}help docker${colors[RESET]}   - Docker commands and containers"
+    echo -e "  ${colors[YELLOW]}help nvm${colors[RESET]}      - Node Version Manager commands"
+    echo -e "  ${colors[GREEN]}help aliases${colors[RESET]}  - Custom aliases and shortcuts"
+    echo -e "  ${colors[BLUE]}help colorize${colors[RESET]} - Colorize output options"
+    echo -e "  ${colors[PURPLE]}help tasks${colors[RESET]}    - Task management system"
+    echo -e "  ${colors[PINK]}help search${colors[RESET]}   - File and content search"
+}
+
+# Function to display help for Docker commands
+display_docker_help() {
+    echo -e "\n${colors[BLUE]}╔══════════════════════════════════════════════════════════════════════════╗${colors[RESET]}"
+    rainbow_text "                           Docker Command Center                               "
+    echo -e "${colors[BLUE]}╚══════════════════════════════════════════════════════════════════════════╝${colors[RESET]}"
+
+    echo -e "\n${colors[LIME]}Database Management:${colors[RESET]}"
+    echo -e "  ${colors[CYAN]}createdb${colors[RESET]}      - Create a new PostgreSQL database container"
+    echo -e "  ${colors[CYAN]}copydockerdb${colors[RESET]}  - Copy database credentials to clipboard"
+    
+    echo -e "\n${colors[ORANGE]}Container Lifecycle:${colors[RESET]}"
+    echo -e "  ${colors[YELLOW]}dstart${colors[RESET]}        - Start containers (docker-compose up)"
+    echo -e "  ${colors[YELLOW]}dstartd${colors[RESET]}       - Start containers in detached mode"
+    echo -e "  ${colors[YELLOW]}dstop${colors[RESET]}         - Stop and remove containers"
+    echo -e "  ${colors[YELLOW]}dshow${colors[RESET]}         - Show running containers"
+    
+    echo -e "\n${colors[PINK]}Container Management:${colors[RESET]}"
+    echo -e "  ${colors[PURPLE]}stopdocker${colors[RESET]}    - Stop all running containers"
+    echo -e "  ${colors[PURPLE]}rmdocker${colors[RESET]}      - Remove all stopped containers"
 }
 
 # Function to display help for Git commands
 display_git_help() {
-    echo -e "${colors[GREEN]}Git Commands and Aliases:${colors[RESET]}"
-    echo -e "  ${colors[YELLOW]}g${colors[RESET]} - Shortcut for git"
-    echo -e "  ${colors[YELLOW]}checkout${colors[RESET]} - Shortcut for git checkout"
-    echo -e "  ${colors[YELLOW]}newbranch${colors[RESET]} - Shortcut for git checkout -b"
-    echo -e "  ${colors[YELLOW]}push${colors[RESET]} - Shortcut for git push"
-    echo -e "  ${colors[YELLOW]}pull${colors[RESET]} - Shortcut for git pull"
-    echo -e "  ${colors[YELLOW]}status${colors[RESET]} - Shortcut for git status"
-    echo -e "  ${colors[YELLOW]}commit${colors[RESET]} - Shortcut for git commit -m"
-    echo -e "  ${colors[YELLOW]}add${colors[RESET]} - Shortcut for git add"
-    echo -e "  ${colors[YELLOW]}pushf${colors[RESET]} - Shortcut for git push --force-with-lease"
-    echo -e "  ${colors[YELLOW]}remote${colors[RESET]} - Shortcut for git remote -v"
-    echo -e "  ${colors[YELLOW]}copyremote${colors[RESET]} - Copy git remote URL to clipboard"
-    echo -e "  ${colors[YELLOW]}clone${colors[RESET]} - Shortcut for git clone"
-    echo -e "  ${colors[YELLOW]}fetch${colors[RESET]} - Shortcut for git fetch"
-    echo -e "  ${colors[YELLOW]}merge${colors[RESET]} - Shortcut for git merge"
-    echo -e "  ${colors[YELLOW]}rebase${colors[RESET]} - Shortcut for git rebase"
-    echo -e "  ${colors[YELLOW]}reset${colors[RESET]} - Shortcut for git reset"
-    echo -e "  ${colors[YELLOW]}revert${colors[RESET]} - Shortcut for git revert"
-    echo -e "  ${colors[YELLOW]}tag${colors[RESET]} - Shortcut for git tag"
-    echo -e "  ${colors[YELLOW]}branch${colors[RESET]} - Shortcut for git branch"
-    echo -e "  ${colors[YELLOW]}log${colors[RESET]} - Shortcut for git log"
+    echo -e "\n${colors[BLUE]}╔══════════════════════════════════════════════════════════════════════════╗${colors[RESET]}"
+    rainbow_text "                           Git Command Center                                  "
+    echo -e "${colors[BLUE]}╚══════════════════════════════════════════════════════════════════════════╝${colors[RESET]}"
+
+    echo -e "\n${colors[LIME]}Basic Commands:${colors[RESET]}"
+    echo -e "  ${colors[CYAN]}g${colors[RESET]}            - Shortcut for git"
+    echo -e "  ${colors[CYAN]}status${colors[RESET]}       - Check repository status"
+    echo -e "  ${colors[CYAN]}add${colors[RESET]}          - Stage changes"
+    echo -e "  ${colors[CYAN]}commit${colors[RESET]}       - Commit changes"
+    
+    echo -e "\n${colors[ORANGE]}Branch Operations:${colors[RESET]}"
+    echo -e "  ${colors[YELLOW]}checkout${colors[RESET]}     - Switch branches"
+    echo -e "  ${colors[YELLOW]}newbranch${colors[RESET]}    - Create new branch"
+    echo -e "  ${colors[YELLOW]}branch${colors[RESET]}       - List branches"
+    
+    echo -e "\n${colors[PINK]}Remote Operations:${colors[RESET]}"
+    echo -e "  ${colors[PURPLE]}push${colors[RESET]}         - Push changes"
+    echo -e "  ${colors[PURPLE]}pull${colors[RESET]}         - Pull changes"
+    echo -e "  ${colors[PURPLE]}pushf${colors[RESET]}        - Force push with lease"
+    echo -e "  ${colors[PURPLE]}remote${colors[RESET]}       - Show remotes"
+    echo -e "  ${colors[PURPLE]}copyremote${colors[RESET]}   - Copy remote URL"
+    echo -e "  ${colors[PURPLE]}clone${colors[RESET]}        - Clone repository"
 }
 
 # Function to display help for NVM commands
 display_nvm_help() {
-    echo -e "${colors[GREEN]}NVM Commands:${colors[RESET]}"
-    echo -e "  ${colors[YELLOW]}nvm install${colors[RESET]} - Install a specific Node.js version"
-    echo -e "  ${colors[YELLOW]}nvm use${colors[RESET]} - Use a specific Node.js version"
-    echo -e "  ${colors[YELLOW]}nvm ls${colors[RESET]} - List installed Node.js versions"
-    echo -e "  ${colors[YELLOW]}nvm ls-remote${colors[RESET]} - List available Node.js versions"
-    echo -e "  ${colors[YELLOW]}nvm alias${colors[RESET]} - Create an alias for a Node.js version"
+    echo -e "\n${colors[BLUE]}╔══════════════════════════════════════════════════════════════════════════╗${colors[RESET]}"
+    rainbow_text "                           Node Version Manager                                "
+    echo -e "${colors[BLUE]}╚══════════════════════════════════════════════════════════════════════════╝${colors[RESET]}"
+
+    echo -e "\n${colors[LIME]}NVM Commands:${colors[RESET]}"
+    echo -e "  ${colors[CYAN]}nvm install${colors[RESET]}   - Install a specific Node.js version"
+    echo -e "  ${colors[CYAN]}nvm use${colors[RESET]}       - Use a specific Node.js version"
+    echo -e "  ${colors[CYAN]}nvm ls${colors[RESET]}        - List installed Node.js versions"
+    echo -e "  ${colors[CYAN]}nvm ls-remote${colors[RESET]} - List available Node.js versions"
+    echo -e "  ${colors[CYAN]}nvm alias${colors[RESET]}     - Create version alias"
 }
 
 # Function to display help for custom aliases
 display_aliases_help() {
-    echo -e "${colors[GREEN]}Custom Aliases:${colors[RESET]}"
-    echo -e "  ${colors[YELLOW]}xx${colors[RESET]} - Exit the terminal"
-    echo -e "  ${colors[YELLOW]}cc${colors[RESET]} - Clear the terminal"
-    echo -e "  ${colors[YELLOW]}ll${colors[RESET]} - List files with details"
-    echo -e "  ${colors[YELLOW]}l${colors[RESET]} - List files"
-    echo -e "  ${colors[YELLOW]}cat${colors[RESET]} - Display file contents with syntax highlighting"
-    echo -e "  ${colors[YELLOW]}zsh${colors[RESET]} - Open .zshrc in vim"
-    echo -e "  ${colors[YELLOW]}szsh${colors[RESET]} - Source .zshrc"
-    echo -e "  ${colors[YELLOW]}czsh${colors[RESET]} - Open .zshrc in VS Code"
-    echo -e "  ${colors[YELLOW]}cursor${colors[RESET]} - Open cursor IDE"
-    echo -e "  ${colors[YELLOW]}createfile${colors[RESET]} - Create a new file with a shebang line"
-}
+    echo -e "\n${colors[BLUE]}╔══════════════════════════════════════════════════════════════════════════╗${colors[RESET]}"
+    rainbow_text "                           Custom Aliases                                      "
+    echo -e "${colors[BLUE]}╚══════════════════════════════════════════════════════════════════════════╝${colors[RESET]}"
 
-# Function to display help for colorize output
-display_colorize_help() {
-    echo -e "${colors[GREEN]}Colorize Output:${colors[RESET]}"
-    echo -e "  ${colors[YELLOW]}colorize${colors[RESET]} - Colorize the output of commands"
-}
-
-# Function to display help for task management
-display_tasks_help() {
-    echo -e "${colors[GREEN]}Task Management Commands:${colors[RESET]}"
-    echo -e "  ${colors[YELLOW]}task 'task description' --by 'due time'${colors[RESET]} - Add a new task"
-    echo -e "  ${colors[YELLOW]}task --list${colors[RESET]} - List all tasks"
-    echo -e "  ${colors[YELLOW]}task remove <task_number>${colors[RESET]} - Remove a specific task"
-    echo -e "  ${colors[YELLOW]}task remove-all${colors[RESET]} - Remove all tasks"
+    echo -e "\n${colors[LIME]}Terminal Operations:${colors[RESET]}"
+    echo -e "  ${colors[CYAN]}xx${colors[RESET]}           - Exit terminal"
+    echo -e "  ${colors[CYAN]}cc${colors[RESET]}           - Clear terminal"
+    echo -e "  ${colors[CYAN]}ll${colors[RESET]}           - List files with details"
+    echo -e "  ${colors[CYAN]}l${colors[RESET]}            - List files"
 }
 
 # Function to display help for search commands
 display_search_help() {
-    echo -e "${colors[GREEN]}Search Commands:${colors[RESET]}"
-    echo -e "  ${colors[YELLOW]}search [OPTIONS] PATTERN${colors[RESET]} - Search for files or folders"
-    echo -e "  ${colors[YELLOW]}--from DIR${colors[RESET]} - Start search from specified directory"
-    echo -e "  ${colors[YELLOW]}--depth N${colors[RESET]} - Limit search depth to N levels"
-    echo -e "  ${colors[YELLOW]}--ext EXT1,EXT2${colors[RESET]} - Specify file extensions to search"
-    echo -e "  ${colors[YELLOW]}--folder${colors[RESET]} - Search for folders instead of files"
-    echo -e "  ${colors[YELLOW]}--string${colors[RESET]} - Search inside files for the pattern"
-    echo -e "  ${colors[YELLOW]}--max-size SIZE${colors[RESET]} - Limit results to files smaller than SIZE"
-    echo -e "  ${colors[YELLOW]}--last-used${colors[RESET]} - Sort results by last used (modified) time"
+    echo -e "\n${colors[BLUE]}╔══════════════════════════════════════════════════════════════════════════╗${colors[RESET]}"
+    rainbow_text "                           Search Tools                                        "
+    echo -e "${colors[BLUE]}╚══════════════════════════════════════════════════════════════════════════╝${colors[RESET]}"
+
+    echo -e "\n${colors[LIME]}Search Options:${colors[RESET]}"
+    echo -e "  ${colors[CYAN]}--from DIR${colors[RESET]}    - Start search from directory"
+    echo -e "  ${colors[CYAN]}--depth N${colors[RESET]}     - Limit search depth"
+    echo -e "  ${colors[CYAN]}--ext EXT${colors[RESET]}     - Filter by extension"
+    echo -e "  ${colors[CYAN]}--folder${colors[RESET]}      - Search folders only"
+    echo -e "  ${colors[CYAN]}--string${colors[RESET]}      - Search file contents"
+    echo -e "  ${colors[CYAN]}--max-size${colors[RESET]}    - Limit file size"
+    echo -e "  ${colors[CYAN]}--last-used${colors[RESET]}   - Sort by last modified"
+}
+
+# Function to display help for task management
+display_tasks_help() {
+    echo -e "\n${colors[BLUE]}╔══════════════════════════════════════════════════════════════════════════╗${colors[RESET]}"
+    rainbow_text "                           Task Management                                     "
+    echo -e "${colors[BLUE]}╚══════════════════════════════════════════════════════════════════════════╝${colors[RESET]}"
+
+    echo -e "\n${colors[LIME]}Task Commands:${colors[RESET]}"
+    echo -e "  ${colors[CYAN]}task 'description' --by 'time'${colors[RESET]} - Add new task"
+    echo -e "  ${colors[CYAN]}task --list${colors[RESET]}                    - List all tasks"
+    echo -e "  ${colors[CYAN]}task remove <number>${colors[RESET]}           - Remove task"
+    echo -e "  ${colors[CYAN]}task remove-all${colors[RESET]}                - Clear all tasks"
 }
 
 # Main function to handle help menu display
 zsh_help() {
     case $1 in
         git) display_git_help ;;
+        docker) display_docker_help ;;
         nvm) display_nvm_help ;;
         aliases) display_aliases_help ;;
-        colorize) display_colorize_help ;;
         tasks) display_tasks_help ;;
         search) display_search_help ;;
         *) display_help_menu ;;
     esac
 }
 
-# Aliases
+# Aliases for help commands
 alias zshhelp='zsh_help'
 alias help='zsh_help'

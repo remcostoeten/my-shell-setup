@@ -1,5 +1,8 @@
 #!/bin/bash
 
+#alias to code directory
+alias co='cd ~/code'
+
 # Shortcuts for navigating directories
 alias .='cd'
 alias ..='cd ..'
@@ -33,3 +36,4 @@ alias project='cd ~/code/notevault'
 # Open cursor IDE
 # nohup runs without being dependent on the terminal, allowing you to close the terminal session while keeping the program running.
 alias cursor='nohup /home/remcostoeten/Applications/cursor.AppImage > /dev/null 2>&1 &'
+
