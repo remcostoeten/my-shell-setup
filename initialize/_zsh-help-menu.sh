@@ -57,10 +57,17 @@ display_help_menu() {
 }
 
 # Function to display help for Docker commands
+# Function to display help for Docker commands
 display_docker_help() {
-    echo -e "\n${colors[BLUE]}╔══════════════════════════════════════════════════════════════════════════╗${colors[RESET]}"
-    rainbow_text "                           Docker Command Center                               "
-    echo -e "${colors[BLUE]}╚══════════════════════════════════════════════════════════════════════════╝${colors[RESET]}"
+    echo -e "\n${colors[BLUE]}╔═══════════════════════════════════════════════╗${colors[RESET]}"
+    echo -e "    🐳 🐋 🐳 🐋 🐳 🐋 🐳 🐋 🐳 🐋 🐳 🐋 🐳 🐋 🐳"
+    echo -e "     ____             _             "
+    echo -e "    |  _ \\  ___   ___| | _____ _ __ "
+    echo -e "    | | | |/ _ \\ / __| |/ / _ \\ '__|"
+    echo -e "    | |_| | (_) | (__|   <  __/ |   "
+    echo -e "    |____/ \\___/ \\___|_|\\_\\___|_|   "
+    echo -e "    🐳 🐋 🐳 🐋 🐳 🐋 🐳 🐋 🐳 🐋 🐳 🐋 🐳 🐋 🐳"
+    echo -e "${colors[BLUE]}╚═════════════════════════════════════════════╝${colors[RESET]}"
 
     echo -e "\n${colors[LIME]}Database Management:${colors[RESET]}"
     echo -e "  ${colors[CYAN]}createdb${colors[RESET]}      - Create a new PostgreSQL database container"
