@@ -54,9 +54,9 @@ display_help_menu() {
     echo -e "  ${colors[BLUE]}help colorize${colors[RESET]} - Colorize output options"
     echo -e "  ${colors[PURPLE]}help tasks${colors[RESET]}    - Task management system"
     echo -e "  ${colors[PINK]}help search${colors[RESET]}   - File and content search"
+    echo -e "  ${colors[CYAN]}help scripts${colors[RESET]}  - Custom scripts and utilities"
 }
 
-# Function to display help for Docker commands
 # Function to display help for Docker commands
 display_docker_help() {
     echo -e "\n${colors[BLUE]}╔═══════════════════════════════════════════════╗${colors[RESET]}"
@@ -166,6 +166,39 @@ display_tasks_help() {
     echo -e "  ${colors[CYAN]}task remove-all${colors[RESET]}                - Clear all tasks"
 }
 
+# Function to display help for scripts
+display_scripts_help() {
+    echo -e "\n${colors[BLUE]}╔══════════════════════════════════════════════════════════════════════════╗${colors[RESET]}"
+    rainbow_text "                           Custom Scripts & Utilities                          "
+    echo -e "${colors[BLUE]}╚══════════════════════════════════════════════════════════════════════════╝${colors[RESET]}"
+
+    echo -e "\n${colors[LIME]}Conventional Commits (cz):${colors[RESET]}"
+    echo -e "  ${colors[CYAN]}cz${colors[RESET]}                     - Start conventional commit process"
+    echo -e "\n${colors[ORANGE]}Available Commit Types:${colors[RESET]}"
+    echo -e "  ${colors[PURPLE]}feat${colors[RESET]}     ➕ A new feature"
+    echo -e "  ${colors[PURPLE]}fix${colors[RESET]}      🔧 A bug fix"
+    echo -e "  ${colors[PURPLE]}docs${colors[RESET]}     📚 Documentation changes"
+    echo -e "  ${colors[PURPLE]}style${colors[RESET]}    💅 Code style changes"
+    echo -e "  ${colors[PURPLE]}refactor${colors[RESET]} ♻️  Code refactoring"
+    echo -e "  ${colors[PURPLE]}perf${colors[RESET]}     ⚡️ Performance improvements"
+    echo -e "  ${colors[PURPLE]}test${colors[RESET]}     🧪 Testing related changes"
+    echo -e "  ${colors[PURPLE]}build${colors[RESET]}    🏗️  Build system changes"
+    echo -e "  ${colors[PURPLE]}ci${colors[RESET]}       👷 CI/CD changes"
+    echo -e "  ${colors[PURPLE]}chore${colors[RESET]}    🧹 Other changes"
+
+    echo -e "\n${colors[LIME]}Secret Generators:${colors[RESET]}"
+    echo -e "  ${colors[CYAN]}jwt${colors[RESET]}      - Generate JWT secret"
+    echo -e "  ${colors[CYAN]}secret${colors[RESET]}   - Generate generic secret"
+    
+    echo -e "\n${colors[YELLOW]}Secret Options:${colors[RESET]}"
+    echo -e "  ${colors[GREEN]}JWT Length:${colors[RESET]}        64 characters"
+    echo -e "  ${colors[GREEN]}Secret Length:${colors[RESET]}     32 characters"
+    echo -e "  ${colors[GREEN]}Format:${colors[RESET]}            Automatically copies to clipboard"
+    echo -e "  ${colors[GREEN]}Output Format:${colors[RESET]}"
+    echo -e "    JWT:    ${colors[GRAY]}JWT_SECRET=<generated-secret>${colors[RESET]}"
+    echo -e "    Secret: ${colors[GRAY]}SECRET=<generated-secret>${colors[RESET]}"
+}
+
 # Main function to handle help menu display
 zsh_help() {
     case $1 in
@@ -175,6 +208,7 @@ zsh_help() {
         aliases) display_aliases_help ;;
         tasks) display_tasks_help ;;
         search) display_search_help ;;
+        scripts) display_scripts_help ;;
         *) display_help_menu ;;
     esac
 }

@@ -1,17 +1,14 @@
 alias xx='exit'
 alias cc='clear'
-
 alias ll='ls -la'
 alias l='ls -l'
-
 alias cat='bat $1 -p'
-
-
 alias zsh='vim ~/.zshrc'
 alias szsh='source ~/.zshrc'
 alias czsh='code ~/.zshrc'
 alias cursor='nohup /home/remcostoeten/Applications/cursor.AppImage > /dev/null 2>&1 &'
-
+alias secret='openssl rand -base64 32 | tr -d "\n" | xclip -selection clipboard'
+alias jwt='echo $secret '
 createfile() {
   if [ -z "$1" ]; then
     echo "Usage: create <filename.extension>"
