@@ -72,19 +72,33 @@ display_docker_help() {
     echo -e "\n${colors[LIME]}Database Management:${colors[RESET]}"
     echo -e "  ${colors[CYAN]}createdb${colors[RESET]}      - Create a new PostgreSQL database container"
     echo -e "  ${colors[CYAN]}copydockerdb${colors[RESET]}  - Copy database credentials to clipboard"
+    echo -e "  ${colors[CYAN]}spinup${colors[RESET]}        - Spin up a new PostgreSQL database with custom config"
     
     echo -e "\n${colors[ORANGE]}Container Lifecycle:${colors[RESET]}"
     echo -e "  ${colors[YELLOW]}dstart${colors[RESET]}        - Start containers (docker-compose up)"
     echo -e "  ${colors[YELLOW]}dstartd${colors[RESET]}       - Start containers in detached mode"
     echo -e "  ${colors[YELLOW]}dstop${colors[RESET]}         - Stop and remove containers"
     echo -e "  ${colors[YELLOW]}dshow${colors[RESET]}         - Show running containers"
+    echo -e "  ${colors[YELLOW]}drestart${colors[RESET]}      - Restart Docker service"
     
     echo -e "\n${colors[PINK]}Container Management:${colors[RESET]}"
     echo -e "  ${colors[PURPLE]}stopdocker${colors[RESET]}    - Stop all running containers"
     echo -e "  ${colors[PURPLE]}rmdocker${colors[RESET]}      - Remove all stopped containers"
+    echo -e "  ${colors[PURPLE]}rmcontainer${colors[RESET]}   - Remove individual container (interactive)"
+    echo -e "  ${colors[PURPLE]}rmall${colors[RESET]}         - Remove all containers and images"
+
+    echo -e "\n${colors[GREEN]}System Operations:${colors[RESET]}"
+    echo -e "  ${colors[CYAN]}reinstall${colors[RESET]}     - Reinstall Docker completely"
+    echo -e "  ${colors[CYAN]}rmpg${colors[RESET]}          - Remove PostgreSQL"
+    echo -e "  ${colors[CYAN]}resetall${colors[RESET]}      - Remove all and reinstall Docker + PostgreSQL"
+
+    echo -e "\n${colors[YELLOW]}Additional Features:${colors[RESET]}"
+    echo -e "  ${colors[GREEN]}- Interactive menu with fuzzy search${colors[RESET]}"
+    echo -e "  ${colors[GREEN]}- Automatic backup of docker-compose.yml${colors[RESET]}"
+    echo -e "  ${colors[GREEN]}- Clipboard integration for credentials${colors[RESET]}"
+    echo -e "  ${colors[GREEN]}- Custom PostgreSQL configuration${colors[RESET]}"
 }
 
-# Function to display help for Git commands
 display_git_help() {
     echo -e "\n${colors[BLUE]}╔══════════════════════════════════════════════════════════════════════════╗${colors[RESET]}"
     rainbow_text "                           Git Command Center                                  "
@@ -213,6 +227,5 @@ zsh_help() {
     esac
 }
 
-# Aliases for help commands
 alias zshhelp='zsh_help'
 alias help='zsh_help'
