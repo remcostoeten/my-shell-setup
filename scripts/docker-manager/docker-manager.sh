@@ -304,4 +304,4 @@ stop_docker_compose() {
 }
 
 # Start the script
-main_menu
+alias db=main_menu
