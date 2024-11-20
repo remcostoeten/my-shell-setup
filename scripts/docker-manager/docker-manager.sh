@@ -9,7 +9,7 @@ CYAN='\033[0;36m'
 MAGENTA='\033[0;35m'
 NC='\033[0m' # No Color
 
-# Function to display the main menu
+# Function to display the main menu with improved layout
 main_menu() {
   while true; do
     clear
@@ -17,25 +17,32 @@ main_menu() {
     echo -e "${GREEN} Docker Management Menu${NC}"
     echo -e "${BLUE}==============================${NC}"
 
-    # Use fzf for selection
-    option=$(echo -e "View all Docker containers\nRemove individual Docker container\nRemove all Docker containers\nRestart Docker\nRemove Docker entirely\nRemove PostgreSQL\nReinstall Docker\nReinstall PostgreSQL\nRemove all and reinstall\nSpin up a new PostgreSQL database\nExit" | fzf --height 10 --header "Select an option")
+    # Use fzf with adjusted height and layout
+    option=$(echo -e "Start Docker Compose\nStop Docker Compose\nView all Docker containers\nRemove individual Docker container\nRemove all Docker containers\nRestart Docker\nRemove Docker entirely\nRemove PostgreSQL\nReinstall Docker\nReinstall PostgreSQL\nRemove all and reinstall\nSpin up a new PostgreSQL database\nExit" | fzf \
+      --height=100% \
+      --layout=reverse \
+      --border \
+      --prompt="Select an option > " \
+      --header="Docker Management Options" \
+      --color="header:blue" \
+      --preview 'echo "Selected: {}"' \
+      --preview-window=up:1)
 
-    # Check if an option was selected
-    if [ -n "$option" ]; then
-      case "$option" in
-      "View all Docker containers") view_containers ;;
-      "Remove individual Docker container") remove_individual_container ;;
-      "Remove all Docker containers") remove_all_containers ;;
-      "Restart Docker") restart_docker ;;
-      "Remove Docker entirely") remove_docker ;;
-      "Remove PostgreSQL") remove_postgresql ;;
-      "Reinstall Docker") reinstall_docker ;;
-      "Reinstall PostgreSQL") reinstall_postgresql ;;
-      "Remove all and reinstall") remove_all_and_reinstall ;;
-      "Spin up a new PostgreSQL database") spin_up_postgresql ;;
-      "Exit") exit 0 ;;
-      esac
-    fi
+    case "$option" in
+    "Start Docker Compose") start_docker_compose ;;
+    "Stop Docker Compose") stop_docker_compose ;;
+    "View all Docker containers") view_containers ;;
+    "Remove individual Docker container") remove_individual_container ;;
+    "Remove all Docker containers") remove_all_containers ;;
+    "Restart Docker") restart_docker ;;
+    "Remove Docker entirely") remove_docker ;;
+    "Remove PostgreSQL") remove_postgresql ;;
+    "Reinstall Docker") reinstall_docker ;;
+    "Reinstall PostgreSQL") reinstall_postgresql ;;
+    "Remove all and reinstall") remove_all_and_reinstall ;;
+    "Spin up a new PostgreSQL database") spin_up_postgresql ;;
+    "Exit") exit 0 ;;
+    esac
   done
 }
 
@@ -190,9 +197,9 @@ spin_up_postgresql() {
     read -p "Enter PostgreSQL database name (default: APP): " pg_db
     pg_db=${pg_db:-APP} # Default to 'APP' if empty
   else
-    pg_user="POSTGRES"
-    pg_password="POSTGRES"
-    pg_db="APP"
+    pg_user="username"
+    pg_password="password"
+    pg_db="database"
   fi
 
   # Create the Docker Compose file
@@ -233,11 +240,68 @@ EOF
   echo -e "${GREEN}PostgreSQL database created and DATABASE_URL copied to clipboard.${NC}"
   echo -e "${YELLOW}Update your docker-compose.yml with the following DATABASE_URL:${NC}"
   echo -e "${GREEN}$DATABASE_URL${NC}"
-  echo -e "${YELLOW}Make sure to change the credentials in your docker-compose.yml if needed.${NC}"
+  echo -e "${YELLOW}Make sure to change the credentials in your docker-compose.yml if script failed to automatically update it.Also don't forget the .env file.${NC}"
   echo -e "${BLUE}==============================${NC}"
   read -p "Press Enter to return to the main menu..."
 }
 
-# Start the script
-alias db=main_menu
+# New function to start Docker Compose
+start_docker_compose() {
+  echo -e "${BLUE}==============================${NC}"
+  echo -e "${GREEN} Starting Docker Compose${NC}"
+  echo -e "${BLUE}==============================${NC}"
 
+  # Find docker-compose files
+  compose_file=$(find . -name "docker-compose.yml" | fzf --header "Select docker-compose.yml file")
+
+  if [ -z "$compose_file" ]; then
+    compose_file="./docker-compose.yml"
+  fi
+
+  if [ -f "$compose_file" ]; then
+    echo -e "${YELLOW}Starting services defined in $compose_file${NC}"
+    docker-compose -f "$compose_file" up -d
+
+    if [ $? -eq 0 ]; then
+      echo -e "${GREEN}Docker Compose services started successfully${NC}"
+    else
+      echo -e "${RED}Failed to start Docker Compose services${NC}"
+    fi
+  else
+    echo -e "${RED}No docker-compose.yml file found${NC}"
+  fi
+
+  read -p "Press Enter to return to the main menu..."
+}
+
+# New function to stop Docker Compose
+stop_docker_compose() {
+  echo -e "${BLUE}==============================${NC}"
+  echo -e "${GREEN} Stopping Docker Compose${NC}"
+  echo -e "${BLUE}==============================${NC}"
+
+  # Find docker-compose files
+  compose_file=$(find . -name "docker-compose.yml" | fzf --header "Select docker-compose.yml file")
+
+  if [ -z "$compose_file" ]; then
+    compose_file="./docker-compose.yml"
+  fi
+
+  if [ -f "$compose_file" ]; then
+    echo -e "${YELLOW}Stopping services defined in $compose_file${NC}"
+    docker-compose -f "$compose_file" down
+
+    if [ $? -eq 0 ]; then
+      echo -e "${GREEN}Docker Compose services stopped successfully${NC}"
+    else
+      echo -e "${RED}Failed to stop Docker Compose services${NC}"
+    fi
+  else
+    echo -e "${RED}No docker-compose.yml file found${NC}"
+  fi
+
+  read -p "Press Enter to return to the main menu..."
+}
+
+# Start the script
+main_menu
