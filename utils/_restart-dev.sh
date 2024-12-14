@@ -1,40 +1,87 @@
-# Development reset function
-restart_dev() {
-    print -P "%F{yellow}🚀 Starting development environment reset...%f"
-    
+#!/bin/bash
+
+# Color definitions and utilities
+declare -A colors=(
+    ["INFO"]="%F{blue}"
+    ["SUCCESS"]="%F{green}"
+    ["WARNING"]="%F{yellow}"
+    ["ERROR"]="%F{red}"
+    ["RESET"]="%f"
+)
+
+# Helper functions
+log_message() {
+    local type=$1
+    local emoji=$2
+    local message=$3
+    print -P "${colors[$type]}$emoji $message${colors[RESET]}"
+}
+
+check_package_json() {
     if [[ ! -f "package.json" ]]; then
-        print -P "%F{red}❌ Error: No package.json found. Are you in the right directory?%f"
+        log_message "ERROR" "❌" "No package.json found. Are you in the right directory?"
         return 1
     fi
+}
+
+clean_directories() {
+    local dirs=("node_modules" ".next")
     
-    print -P "%F{blue}🧹 Cleaning project directories...%f"
+    log_message "INFO" "🧹" "Cleaning project directories..."
     
-    if [[ -d "node_modules" ]]; then
-        print -P "%F{cyan}  📦 Removing node_modules...%f"
-        rm -rf node_modules
-        print -P "%F{green}  ✅ node_modules removed%f"
-    fi
-    
-    if [[ -d ".next" ]]; then
-        print -P "%F{cyan}  🗑️  Removing .next build directory...%f"
-        rm -rf .next
-        print -P "%F{green}  ✅ .next removed%f"
-    fi
-    
-    print -P "%F{yellow}📥 Installing dependencies with pnpm...%f"
+    for dir in "${dirs[@]}"; do
+        if [[ -d "$dir" ]]; then
+            log_message "INFO" "📦" "Removing $dir..."
+            rm -rf "$dir"
+            log_message "SUCCESS" "✅" "$dir removed"
+        fi
+    done
+}
+
+install_dependencies() {
+    log_message "WARNING" "📥" "Installing dependencies with pnpm..."
     if pnpm install; then
-        print -P "%F{green}✅ Dependencies installed successfully%f"
+        log_message "SUCCESS" "✅" "Dependencies installed successfully"
+        return 0
     else
-        print -P "%F{red}❌ Failed to install dependencies%f"
+        log_message "ERROR" "❌" "Failed to install dependencies"
         return 1
     fi
-    
-    print -P "%F{magenta}🚀 Starting Next.js development server with Turbo...%f"
-    print -P "%F{blue}⌛ Please wait...%f"
+}
+
+start_dev_server() {
+    log_message "INFO" "🚀" "Starting Next.js development server with Turbo..."
+    log_message "INFO" "⌛" "Please wait..."
     pnpm next dev --turbo
 }
 
-# Add these to your .zshrc:
-autoload -U colors && colors
-precmd() { print_current_path }
-alias pid='restart_dev'
+open_in_browser() {
+    local port=$(grep -o '"dev":.*"next dev.*-p \([0-9]*\)' package.json | grep -o '[0-9]*' || echo "3000")
+    log_message "INFO" "🌐" "Waiting for server on port $port..."
+    
+    # Wait for server to be ready
+    while ! nc -z localhost $port; do
+        sleep 1
+    done
+    
+    log_message "SUCCESS" "🚀" "Opening http://localhost:$port in browser..."
+    xdg-open "http://localhost:$port"
+}
+
+# Main functions
+restart_dev() {
+    check_package_json || return 1
+    clean_directories
+    install_dependencies || return 1
+    start_dev_server
+}
+
+dev_mode() {
+    check_package_json || return 1
+    pnpm run dev &
+    open_in_browser
+}
+
+# Aliases
+alias restart='restart_dev'
+alias dev='dev_mode'

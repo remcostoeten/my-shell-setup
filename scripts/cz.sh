@@ -21,7 +21,7 @@ display_help() {
     echo -e "  ${CYAN}cz${NC} [options]\n"
 
     echo -e "${BOLD}OPTIONS:${NC}"
-    echo -e "  ${GREEN}--help${NC}        Show this help message"
+    echo -e "  ${GREEN}C${NC}        Show this help message"
     echo -e "  ${GREEN}--from${NC}        Specify source directory"
     echo -e "  ${GREEN}--depth${NC}       Set search depth"
     echo -e "  ${GREEN}--ext${NC}         Filter by file extension"

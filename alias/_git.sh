@@ -20,4 +20,6 @@ alias revert='git revert'
 alias tag='git tag'
 alias branch='git branch'
 alias log='git log'
+
 alias gc='git add . ; git commit -m "$1" ; git push'
+
