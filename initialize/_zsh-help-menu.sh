@@ -51,7 +51,6 @@ display_help_menu() {
     echo -e "  ${colors[ORANGE]}help docker${colors[RESET]}   - Docker commands and containers"
     echo -e "  ${colors[YELLOW]}help nvm${colors[RESET]}      - Node Version Manager commands"
     echo -e "  ${colors[GREEN]}help aliases${colors[RESET]}  - Custom aliases and shortcuts"
-    echo -e "  ${colors[BLUE]}help colorize${colors[RESET]} - Colorize output options"
     echo -e "  ${colors[PURPLE]}help tasks${colors[RESET]}    - Task management system"
     echo -e "  ${colors[PINK]}help search${colors[RESET]}   - File and content search"
     echo -e "  ${colors[CYAN]}help scripts${colors[RESET]}  - Custom scripts and utilities"
@@ -99,17 +98,22 @@ display_docker_help() {
     echo -e "  ${colors[GREEN]}- Custom PostgreSQL configuration${colors[RESET]}"
 }
 
+# Update display_git_help function
 display_git_help() {
     echo -e "\n${colors[BLUE]}╔══════════════════════════════════════════════════════════════════════════╗${colors[RESET]}"
     rainbow_text "                           Git Command Center                                  "
     echo -e "${colors[BLUE]}╚══════════════════════════════════════════════════════════════════════════╝${colors[RESET]}"
-
     echo -e "\n${colors[LIME]}Basic Commands:${colors[RESET]}"
     echo -e "  ${colors[CYAN]}g${colors[RESET]}            - Shortcut for git"
     echo -e "  ${colors[CYAN]}status${colors[RESET]}       - Check repository status"
     echo -e "  ${colors[CYAN]}add${colors[RESET]}          - Stage changes"
     echo -e "  ${colors[CYAN]}commit${colors[RESET]}       - Commit changes"
+    echo -e "  ${colors[CYAN]}gcm${colors[RESET]}          - Commit and push (usage: gcm \"your message\")"
     
+    echo -e "\n${colors[ORANGE]}Quick Commit Example:${colors[RESET]}"
+    echo -e "  ${colors[YELLOW]}gcm \"feat: add new feature\"${colors[RESET]} - Commits and pushes in one command"
+    
+    # Rest of the existing git help content...
     echo -e "\n${colors[ORANGE]}Branch Operations:${colors[RESET]}"
     echo -e "  ${colors[YELLOW]}checkout${colors[RESET]}     - Switch branches"
     echo -e "  ${colors[YELLOW]}newbranch${colors[RESET]}    - Create new branch"
@@ -124,7 +128,6 @@ display_git_help() {
     echo -e "  ${colors[PURPLE]}clone${colors[RESET]}        - Clone repository"
 }
 
-# Function to display help for NVM commands
 display_nvm_help() {
     echo -e "\n${colors[BLUE]}╔══════════════════════════════════════════════════════════════════════════╗${colors[RESET]}"
     rainbow_text "                           Node Version Manager                                "
@@ -138,7 +141,6 @@ display_nvm_help() {
     echo -e "  ${colors[CYAN]}nvm alias${colors[RESET]}     - Create version alias"
 }
 
-# Function to display help for custom aliases
 display_aliases_help() {
     echo -e "\n${colors[BLUE]}╔══════════════════════════════════════════════════════════════════════════╗${colors[RESET]}"
     rainbow_text "                           Custom Aliases                                      "
@@ -213,7 +215,38 @@ display_scripts_help() {
     echo -e "    Secret: ${colors[GRAY]}SECRET=<generated-secret>${colors[RESET]}"
 }
 
-# Main function to handle help menu display
+# Function to display help for scripts directory
+display_scripts_directory_help() {
+    echo -e "\n${colors[BLUE]}╔══════════════════════════════════════════════════════════════════════════╗${colors[RESET]}"
+    rainbow_text "                           Available Scripts                                     "
+    echo -e "${colors[BLUE]}╚══════════════════════════════════════════════════════════════════════════╝${colors[RESET]}"
+
+    echo -e "\n${colors[LIME]}Audio Recording:${colors[RESET]}"
+    echo -e "  ${colors[CYAN]}voice${colors[RESET]}         - Start voice recording script"
+    echo -e "  ${colors[CYAN]}voice2clip${colors[RESET]}    - Convert speech to clipboard text"
+
+    echo -e "\n${colors[LIME]}Docker Management:${colors[RESET]}"
+    echo -e "  ${colors[CYAN]}db${colors[RESET]}           - Interactive Docker management menu"
+    echo -e "  ${colors[CYAN]}spinup${colors[RESET]}       - Set up new PostgreSQL container"
+
+    echo -e "\n${colors[LIME]}Git Tools:${colors[RESET]}"
+    echo -e "  ${colors[CYAN]}cz${colors[RESET]}           - Conventional commit helper"
+    echo -e "  ${colors[CYAN]}gcm${colors[RESET]}          - Quick commit and push"
+
+    echo -e "\n${colors[LIME]}Development:${colors[RESET]}"
+    echo -e "  ${colors[CYAN]}restart${colors[RESET]}      - Clean and restart dev server"
+    echo -e "  ${colors[CYAN]}dev${colors[RESET]}          - Start development environment"
+
+    echo -e "\n${colors[LIME]}Utilities:${colors[RESET]}"
+    echo -e "  ${colors[CYAN]}search${colors[RESET]}       - Advanced file/directory search"
+    echo -e "  ${colors[CYAN]}jwt${colors[RESET]}          - Generate JWT secret"
+    echo -e "  ${colors[CYAN]}secret${colors[RESET]}       - Generate generic secret"
+
+    echo -e "\n${colors[LIME]}Location:${colors[RESET]}"
+    echo -e "  Scripts are stored in: ${colors[YELLOW]}~/projects/zsh-setup/scripts/${colors[RESET]}"
+}
+
+# Update the main zsh_help function to include the new option
 zsh_help() {
     case $1 in
         git) display_git_help ;;
@@ -222,7 +255,7 @@ zsh_help() {
         aliases) display_aliases_help ;;
         tasks) display_tasks_help ;;
         search) display_search_help ;;
-        scripts) display_scripts_help ;;
+        scripts) display_scripts_directory_help ;;
         *) display_help_menu ;;
     esac
 }

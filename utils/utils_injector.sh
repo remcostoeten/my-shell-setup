@@ -8,6 +8,7 @@ RESTART_DEV="$UTILS_DIR/_restart-dev.sh"
 PRINT_PATH="$UTILS_DIR/_print-current-path.sh"
 OPEN_POSTGRES="$UTILS_DIR/_open-postgres.sh"
 CREATE_DOCKERDB="$UTILS_DIR/_create_dockerdb_interactive.sh"
+AUTOJUMP="$UTILS_DIR/_autojump"
 
 # Source _task-adder.sh with error handling
 if ! source "$TASK_ADDER" 2>/dev/null; then

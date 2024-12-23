@@ -17,7 +17,6 @@ list_tasks() {
     return
   fi
 
-  echo "Current tasks:"
   local index=1
   while IFS='|' read -r task due_time; do
     echo "$index. $task (Due: $due_time)"

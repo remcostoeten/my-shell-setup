@@ -1,3 +1,6 @@
+## git add; git commits with $1 being  the message and pushes. E.g. gcm some message here
+alias gcm='f(){ git commit -m "${*}"; }; f'
+
 alias g='git'
 alias checkout='git checkout'
 alias newranch='git checkout -b'
