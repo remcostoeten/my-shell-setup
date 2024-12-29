@@ -1,15 +1,18 @@
 #!/bin/bash
 
-BASE_DIR="/home/remcostoeten/projects/zsh-setup"
+# Base directory
+export BASE_DIR="$HOME/projects/zsh-setup"
 
-# Source injector files
-source "${BASE_DIR}/alias/alias_injector.sh"
-source "${BASE_DIR}/packages/package-injector.sh"
+# Load core utilities first
 source "${BASE_DIR}/utils/utils_injector.sh"
 
+# Load package management
+source "${BASE_DIR}/packages/package-injector.sh"
+
+# Load aliases
+source "${BASE_DIR}/alias/alias_injector.sh"
+
+# Load scripts
 source "${BASE_DIR}/scripts/script_injector.sh"
-# source "${BASE_DIR}/core-settings/core_injector.sh"
 
-source "${BASE_DIR}/initialize/_zsh-help-menu.sh"
-
-source "${BASE_DIR}/_welcome-message.sh"
+source ./_welcome-message.sh
