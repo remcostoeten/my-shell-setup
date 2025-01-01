@@ -10,6 +10,7 @@ declare -a SCRIPTS=(
   "search-wrapper.sh"
   "docker-manager/docker-manager.sh"
   # "kill-ports.sh"
+  "alarm.sh"
   "search-dirs.sh"
 )
 
