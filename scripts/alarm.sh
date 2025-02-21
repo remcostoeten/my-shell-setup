@@ -1,4 +1,4 @@
-alarm() {
+aalarm() {
   local seconds=0
   local message="Time is up!"
   local title="Alarm"

@@ -1,5 +1,5 @@
 # Basic git commands
-alias g='git'
+alias g='lazygit'
 alias ga='git add'
 alias gs='git status'
 alias gf='git fetch'
@@ -18,22 +18,21 @@ alias gbr='git branch'
 
 # Commit related
 function gcm() {
-    git commit -m "$*"
-    source "${UTILS_PATH}/_timestamp.sh"
-    update_timestamp
+  git commit -m "$*"
+  source "${UTILS_PATH}/_timestamp.sh"
+  update_timestamp
 }
 
 # Combined commands
 function gc() {
-    git add .
-    git commit -m "$1"
-    source "${UTILS_PATH}/_timestamp.sh"
-    update_timestamp
-    git push
+  git add .
+  git commit -m "$1"
+  source "${UTILS_PATH}/_timestamp.sh"
+  update_timestamp
+  git push
 }
 
 # Remote operations
 alias gr='git remote -v'
 alias grc='git remote -v | awk "NR==1 {print \$2}" | xclip -selection clipboard'
 alias gcl='git clone'
-

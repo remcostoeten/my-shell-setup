@@ -9,12 +9,12 @@ declare -a SCRIPTS=(
   "nvidia-fan-control.sh"
   "search-wrapper.sh"
   "docker-manager/docker-manager.sh"
-  # "kill-ports.sh"
   "alarm.sh"
-  "search-dirs.sh"
 )
 
-alias rip='python3 ./ripgrep.py'
+# Alias for ripgrep
+alias rip='python3 /home/remcostoeten/projects/zsh-setup/scripts/ripgrep.py'
+
 # Source scripts with error handling
 for script in "${SCRIPTS[@]}"; do
   script_path="${SCRIPTS_DIR}/${script}"

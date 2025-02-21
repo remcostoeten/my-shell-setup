@@ -17,7 +17,7 @@ source "${ALIAS_PATH}/_navigating.sh"
 source "${ALIAS_PATH}/_shortcuts.sh"
 source "${ALIAS_PATH}/_programs.sh"
 source "${ALIAS_PATH}/_tig-git-replacement.sh"
-
+source "${ALIAS_PATH}/_exa-ls-replacement.sh"
 # Initialize help menu last
 #source "${BASE_PATH}/initialize/_zsh-help-menu.sh"
 

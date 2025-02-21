@@ -26,12 +26,37 @@ EXCLUSIONS=(
 )
 
 usage() {
-    echo -e "${CYAN}Usage:${NO_COLOR} search-dirs ${GREEN}-s <search-string>${NO_COLOR} [${YELLOW}options${NO_COLOR}]"
+    echo -e "${CYAN}╔══════════════════════════════════════════════════════════════════════════╗${NO_COLOR}"
+    echo -e "${CYAN}║                              Search Directories                           ║${NO_COLOR}"
+    echo -e "${CYAN}╚══════════════════════════════════════════════════════════════════════════╝${NO_COLOR}"
+    echo -e "${GREEN}Usage:${NO_COLOR} search-dirs ${GREEN}-s <search-string>${NO_COLOR} [${YELLOW}options${NO_COLOR}]"
     echo -e "${CYAN}Options:${NO_COLOR}"
     echo -e "  ${GREEN}-s <search-string>${NO_COLOR}     Search string (required)"
     echo -e "  ${YELLOW}-d <starting-dir>${NO_COLOR}     Starting directory (default: /)"
     echo -e "  ${YELLOW}-n${NO_COLOR}                    Non-recursive search"
     echo -e "  ${YELLOW}-l <max-depth>${NO_COLOR}        Maximum depth"
+    echo -e "  ${YELLOW}-e <paths>${NO_COLOR}            Comma-separated list of paths to exclude"
+    echo -e "  ${YELLOW}-L <max-name-length>${NO_COLOR}  Maximum name length"
+    echo -e "  ${YELLOW}-S <max-folder-size>${NO_COLOR}  Maximum folder size"
+    echo -e "  ${YELLOW}-h${NO_COLOR}                    Show this help"
+    echo
+    echo -e "${GREEN}Examples:${NO_COLOR}"
+    echo -e "  ${CYAN}1. Directory Search:${NO_COLOR}"
+    echo "     search-dirs -s 'foldername'              # Find directories named 'foldername'"
+    echo "     search-dirs -s 'config' -d /etc          # Search in /etc for directories named 'config'"
+    echo "     search-dirs -s 'config' -d /etc -l 2     # Limit search depth to 2 levels"
+    echo
+    echo -e "  ${CYAN}2. Excluding Paths:${NO_COLOR}"
+    echo "     search-dirs -s 'src' -e 'node_modules,dist'  # Exclude 'node_modules' and 'dist' directories"
+    echo
+    echo -e "  ${CYAN}3. Advanced Usage:${NO_COLOR}"
+    echo "     search-dirs -s 'src' -d ~/projects -n        # Non-recursive search in ~/projects"
+    echo "     search-dirs -s 'src' -d ~/projects -L 10     # Limit directory name length to 10 characters"
+    echo "     search-dirs -s 'src' -d ~/projects -S 100M   # Limit folder size to 100MB"
+    echo
+    echo -e "${GREEN}Commands:${NO_COLOR}"
+    echo "  search-dirs       Execute search"
+    echo "  search-help       Show this help"
 }
 
 find_cmd() {
@@ -53,7 +78,7 @@ find_cmd() {
 
 search_dirs() {
     # Parse arguments
-    while getopts "s:d:e:nl:L:S:" opt; do
+    while getopts "s:d:e:nl:L:S:h" opt; do
         case $opt in
             s) SEARCH_STRING="$OPTARG" ;;
             d) START_DIR="$OPTARG" ;;
@@ -62,6 +87,7 @@ search_dirs() {
             l) MAX_DEPTH="$OPTARG" ;;
             L) MAX_NAME_LENGTH="$OPTARG" ;;
             S) MAX_FOLDER_SIZE="$OPTARG" ;;
+            h) usage; return 0 ;;
             *) usage; return 1 ;;
         esac
     done

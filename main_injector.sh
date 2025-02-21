@@ -1,7 +1,7 @@
 export BASE_DIR="$HOME/projects/zsh-setup"
 
 # Array to store error messages
-errors=()
+declare -a errors=()
 
 # Function to source a file if it exists
 source_if_exists() {
@@ -25,7 +25,7 @@ source_if_exists "${BASE_DIR}/alias/alias_injector.sh"
 source_if_exists "${BASE_DIR}/scripts/script_injector.sh"
 
 # Load welcome message
-source_if_exists ~/projects/zsh-setup/_welcome-message.sh
+source_if_exists "${BASE_DIR}/_welcome-message.sh"
 
 # Function to display errors
 zsh_error() {
@@ -40,8 +40,8 @@ zsh_error() {
     fi
 }
 
-# Add zsh_error function to shell
-if [ -z "$(type -t zsh_error)" ] || [ "$(type -t zsh_error)" != "function" ]; then
+# Add zsh_error function to shell if not already present
+if ! grep -q "zsh_error()" ~/.zshrc; then
     echo 'zsh_error() {
         if [ ${#errors[@]} -eq 0 ]; then
             echo "No errors found."
@@ -57,4 +57,3 @@ fi
 
 # Execute zsh_error to show any errors that occurred during setup
 zsh_error
-

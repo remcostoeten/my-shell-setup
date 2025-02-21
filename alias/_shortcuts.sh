@@ -5,8 +5,17 @@ alias ll='ls -la'
 alias la='ls -A'
 alias l='ls'
 alias c='clear'
-alias ..='cd ..'
-alias ...='cd ../..'
+
+# Function to create aliases for navigating up to 9 levels
+create_cd_aliases() {
+  for i in {1..9}; do
+    dots=$(printf '%*s' "$i" | tr ' ' '.')
+    alias "$dots"="cd $(printf '../%.0s' $(seq 1 $i))"
+  done
+}
+
+# Call the function to create the aliases
+create_cd_aliases
 
 # Dev shortcuts
 alias p='pnpm'
@@ -15,11 +24,9 @@ alias i='pnpm install'
 alias a='pnpm add'
 alias b='bun'
 alias bi='bun install'
-alias dev='pnpm dev'
-alias rmalla='rm -rf node_modules .next'
-alias restart='rm -rf node_modules .next; pnpm install ; pnpm dev'
-alias rebuild='rm --rf node_modules; .next; pnpm i ; pnpm build'
-# Docker shortcuts
+alias restart='rm -rf node_modules .next; pnpm install; pnpm dev'
+alias rmall='rm -rf node_modules; [ -d .next ] && rm -rf .next'
+alias re='rm -rf node_modules; [ -d .next ] && rm -rf .next && pnpm install && pnpm dev'
 alias d='docker'
 alias dc='docker-compose'
 alias dcu='docker-compose up'
@@ -45,25 +52,18 @@ alias cpu='htop'
 
 # Navigation shortcuts
 alias home='cd ~'
-alias dev='cd ~/dev'
+alias devdir='cd ~/dev'
 alias projects='cd ~/projects'
 alias desktop='cd ~/Desktop'
 alias pictures='cd ~/Pictures'
 alias videos='cd ~/Videos'
 alias config='cd ~/.config/'
 alias downloads='cd ~/Downloads/'
-alias ..='cd ..'
-alias ..='cd ..'
-alias ..='cd ..'
-alias ..='cd ..'
-alias ...='cd ../..'
-alias ....='cd ../../..'
-alias .....='cd ../../../..'
 
 # File operations
 alias cp='cp -i'
 alias mv='mv -i'
-alias rm='rm -i'"
+alias rm='rm -i'
 alias mkdir='mkdir -p'
 alias md='mkdir'
 alias rd='rmdir'
@@ -71,7 +71,6 @@ alias rd='rmdir'
 # Network
 alias myip='curl http://ipecho.net/plain; echo'
 alias ping='ping -c 5'
-alias ports='netstat -tulanp'
 alias listen='lsof -i -P | grep LISTEN'
 
 # Search shortcuts
@@ -79,11 +78,9 @@ alias ff='find . -type f -name'
 alias fd='find . -type d -name'
 alias ftext='grep -r'
 
-## Misc
+# Misc
 alias python='python3'
-
-# Add your other shortcuts here...
-
+alias click='python /home/remcostoeten/autoclick.py'
 # Help function
 function show_shortcuts() {
   echo "Available shortcuts:"
@@ -171,6 +168,7 @@ function show_shortcuts() {
   echo "  zshalias - edit aliases"
   echo "  src      - source ~/.zshrc"
   echo "  t        - tsc --noEmit"
+  echo "  click    - Hold b to spam left mouse:wq"
   echo "Type 'shelp' to see this menu again"
 }
 
@@ -178,19 +176,19 @@ alias shelp='show_shortcuts'
 
 # Extraction shortcuts
 function extract() {
-  if [ -f $1 ]; then
+  if [ -f "$1" ]; then
     case $1 in
-    *.tar.bz2) tar xjf $1 ;;
-    *.tar.gz) tar xzf $1 ;;
-    *.bz2) bunzip2 $1 ;;
-    *.rar) unrar x $1 ;;
-    *.gz) gunzip $1 ;;
-    *.tar) tar xf $1 ;;
-    *.tbz2) tar xjf $1 ;;
-    *.tgz) tar xzf $1 ;;
-    *.zip) unzip $1 ;;
-    *.Z) uncompress $1 ;;
-    *.7z) 7z x $1 ;;
+    *.tar.bz2) tar xjf "$1" ;;
+    *.tar.gz) tar xzf "$1" ;;
+    *.bz2) bunzip2 "$1" ;;
+    *.rar) unrar x "$1" ;;
+    *.gz) gunzip "$1" ;;
+    *.tar) tar xf "$1" ;;
+    *.tbz2) tar xjf "$1" ;;
+    *.tgz) tar xzf "$1" ;;
+    *.zip) unzip "$1" ;;
+    *.Z) uncompress "$1" ;;
+    *.7z) 7z x "$1" ;;
     *) echo "'$1' cannot be extracted via extract()" ;;
     esac
   else
@@ -208,7 +206,7 @@ alias psg='ps aux | grep'
 alias kill9='kill -9'
 
 # Quick directory shortcuts
-alias p='cd ~/projects'
+'cd ~/projects'
 alias xx='exit'
 alias x='exit'
 alias q='exit'
