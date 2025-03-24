@@ -18,15 +18,18 @@ create_cd_aliases() {
 create_cd_aliases
 
 # Dev shortcuts
+alias bi='bun install'
+alias bb='bun run dev'
 alias p='pnpm'
 alias dev='pnpm dev'
 alias i='pnpm install'
 alias a='pnpm add'
 alias b='bun'
-alias bi='bun install'
+alias bi='pnpm build'
 alias restart='rm -rf node_modules .next; pnpm install; pnpm dev'
-alias rmall='rm -rf node_modules; [ -d .next ] && rm -rf .next'
-alias re='rm -rf node_modules; [ -d .next ] && rm -rf .next && pnpm install && pnpm dev'
+# alias rmall='rm -rf node_modules; [ -d .next ] && rm -rf .next' @@ See _restart-next.sh
+# alias rmall='rmallnext'
+# alias re='rm -rf node_modules; [ -d .next ] && rm -rf .next && pnpm install && pnpm dev'
 alias d='docker'
 alias dc='docker-compose'
 alias dcu='docker-compose up'
@@ -206,7 +209,6 @@ alias psg='ps aux | grep'
 alias kill9='kill -9'
 
 # Quick directory shortcuts
-'cd ~/projects'
 alias xx='exit'
 alias x='exit'
 alias q='exit'

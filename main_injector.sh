@@ -12,6 +12,9 @@ source_if_exists() {
     fi
 }
 
+# Load core
+source_if_exists "${BASE_DIR}/core-settings/core_injector.sh"
+
 # Load core utilities first
 source_if_exists "${BASE_DIR}/utils/utils_injector.sh"
 

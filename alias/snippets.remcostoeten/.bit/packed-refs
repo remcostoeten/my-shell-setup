@@ -1,0 +1,10 @@
+# pack-refs with: peeled fully-peeled sorted 
+289f47b175af0a7d950dec5604ad80b1ac0684d2 refs/remotes/origin/bbbbbbbb
+35931c3bee1f0f5536f7b006eb14b9d28439b462 refs/remotes/origin/develop
+4bde3e8bd3c6fb14c4cb19ff3665608eb79c1667 refs/remotes/origin/feature/chat
+b2fe01f5c9fe5b9a01e22da8de513c5dd6c7b5b9 refs/remotes/origin/feature/firebase-course
+97e23e9f698fd4c2f8fb30ce22e85bf555da71ee refs/remotes/origin/main
+df53d48e342384b82c95c0e3b01422ea56ffac9c refs/remotes/origin/master
+159987741a6824d75fbf6cf32ad339afd7d7034d refs/remotes/origin/new-branch
+bc86f5267d63741a277f9a5585abe44c72fc71c4 refs/remotes/origin/newrepo
+8102419b9df4b9199c2d23f8199af774df51d366 refs/remotes/origin/xxx

@@ -23,3 +23,5 @@ aalarm() {
   echo "⏰ Alarm set for $1 ($seconds seconds)"
   sleep $seconds && notify-send "$title" "$message"
 }
+
+alias alarm=aalarm

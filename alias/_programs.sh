@@ -1,6 +1,7 @@
+export APPS='cd ~/Applications/'
 alias code='code .'
 alias vim='nvim'
-alias cursor='cursor .'
+alias cursor='$APPS && ./cursor'
 alias brave='brave .'
 alias chrome='google-chrome .'
 alias firefox='firefox .'

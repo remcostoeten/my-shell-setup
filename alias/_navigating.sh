@@ -28,7 +28,7 @@ alias root='cd /'
 
 # Shortcuts for development environments
 alias d='cd ~/dev'
-alias dd='cd ~/Downloads/projects/;pnpmm dev'
+alias dd='cd ~/Downloads/projects/ && pnpm dev'
 
 alias downloads='cd ~/Downloads'
 alias projects='cd ~/projects'
@@ -38,7 +38,7 @@ alias project='cd ~/code/notevault'
 
 # Open cursor IDE
 #nohup runs without being dependent on the terminal, allowing you to close the terminal session while keeping the program running.
-alias cursor='/home/remcostoeten/Applications/cursor.AppImage > /dev/null 2>&1 &'
+#alias cursor='/home/remcostoeten/Applications/cursor.AppImage > /dev/null 2>&1 &'
 function startauth() {
   # Change to the project directory
   cd ~/Downloads/project

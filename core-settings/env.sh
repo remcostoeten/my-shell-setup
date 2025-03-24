@@ -1,0 +1,1 @@
+export STARSHIP_CONFIG=/home/remcostoeten/projects/zsh-setup/themes/starship.toml

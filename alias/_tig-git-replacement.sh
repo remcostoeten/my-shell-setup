@@ -37,4 +37,3 @@ alias git branch='tig refs'
 alias githelp='tig_help'
 
 # Inform the user that aliases have been set
-echo -e "${GREEN}Tig aliases have been set. Use '${YELLOW}tig help${GREEN}' for usage information.${NC}"
