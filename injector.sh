@@ -13,6 +13,7 @@ fi
 INJECTOR_PATHS_RELATIVE=(
     "injectors/alias-injector.sh"
     "injectors/function-injector.sh"
+    "injectors/packages-injector.sh"
     # Add other injector paths here
 )
 
