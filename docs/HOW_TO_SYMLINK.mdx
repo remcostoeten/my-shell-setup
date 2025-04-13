@@ -1,0 +1,17 @@
+## How to create a symlink
+
+To create a symlink, you can use the `ln -s` command. The first argument is the path to the file you want to symlink and the second argument is the path to the file you want to symlink it to.
+
+```bash
+ln -s ~/path/to/the/file/you/want/to/symlink/to/filename.sh ~/.path/to/the/file/you/want/to/symlink/from/filename.sh
+```
+
+Which will create a symlink from `~/.path/to/the/file/you/want/to/symlink/from/filename.sh` to `~/path/to/the/file/you/want/to/symlink/to/filename.sh`.
+
+Example:
+
+```bash
+ln -s ~/.config/dotfiles/.zshrc ~/.zshrc
+```
+
+This will create a symlink from `~/.zshrc` to `~/.config/dotfiles/.zshrc`.

@@ -7,15 +7,19 @@ This repository contains configuration files (dotfiles) for various tools and ap
 ## Naming Convention
 
 Folders ending with `.symlink` contain files that need to be symlinked. For example:
+
 - `hammerspoon.symlink/init.lua` → `~/.hammerspoon/init.lua`
 - `vim.symlink/.vimrc` → `~/.vimrc`
 - `zsh.symlink/.zshrc` → `~/.zshrc`
 
 ---
 
-## Setup Instructions
+## Project structure
 
-Follow these steps to set up your dotfiles on a new machine:
+I try to maintain a a certain structure in this architecture
 
-### 1. Clone the Repository
-Clone this repository into your system:
+`/core/` is where all the injectors live which are responsible for injecting a certain module(s) into the main config. It also contains other required setup configuration.
+
+`/programs` are custom CLI tools or other helper utilities.
+
+To be continued..

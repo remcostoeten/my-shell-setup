@@ -1,1 +1,0 @@
-source ./enviorrment-variables/injector.sh

@@ -1,1 +1,0 @@
-export PATH="$PATH:$HOME/.config/dotfiles/bin/dockertool"

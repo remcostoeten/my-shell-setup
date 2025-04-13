@@ -1,0 +1,1270 @@
+#!/usr/bin/env zsh
+
+# --- Color Definitions ---
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[0;37m'
+NC='\033[0m' # No Color
+
+# --- Check for required utilities ---
+check_requirements() {
+  local missing_tools=()
+
+  # Check for clipboard utilities
+  if ! command -v pbcopy >/dev/null 2>&1 && ! command -v xclip >/dev/null 2>&1 && ! command -v clip.exe >/dev/null 2>&1; then
+    missing_tools+=("clipboard utility (pbcopy, xclip, or clip.exe)")
+  fi
+
+  # Check for docker and docker-compose
+  if ! command -v docker >/dev/null 2>&1; then
+    missing_tools+=("docker")
+  fi
+
+  # Check for docker-compose (or docker compose)
+  # Check for 'docker compose' first (newer syntax)
+  if ! docker compose version >/dev/null 2>&1; then
+    # If not found, check for 'docker-compose' (older syntax)
+    if ! command -v docker-compose >/dev/null 2>&1; then
+      missing_tools+=("docker-compose (or docker compose v2+)")
+    else
+      # Older docker-compose found, use it
+      DOCKER_COMPOSE_CMD="docker-compose"
+    fi
+  else
+    # Newer 'docker compose' found, use it
+    DOCKER_COMPOSE_CMD="docker compose"
+  fi
+
+  # Check for jq (optional but good for future enhancements)
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "${YELLOW}Warning: 'jq' is not installed. Some advanced features might be unavailable in the future.${NC}"
+  fi
+
+  # If there are missing tools, show error and exit
+  if [ ${#missing_tools[@]} -gt 0 ]; then
+    echo "${RED}Error: The following required tools are missing:${NC}"
+    for tool in "${missing_tools[@]}"; do
+      echo "  - ${tool}"
+    done
+    echo "${YELLOW}Please install these tools before running this script.${NC}"
+    exit 1
+  fi
+
+  # Set default compose command if not set by checks (shouldn't happen if checks pass)
+  DOCKER_COMPOSE_CMD=${DOCKER_COMPOSE_CMD:-"docker compose"}
+  # echo "Using Docker Compose command: $DOCKER_COMPOSE_CMD" # Optional debug line
+}
+
+# --- Function to copy to clipboard cross-platform ---
+copy_to_clipboard() {
+  local content_to_copy="$1"
+  # Determine which clipboard command to use based on OS
+  if command -v pbcopy >/dev/null 2>&1; then
+    # macOS
+    echo "$content_to_copy" | pbcopy
+  elif command -v xclip >/dev/null 2>&1; then
+    # Linux with xclip
+    echo "$content_to_copy" | xclip -selection clipboard
+  elif command -v clip.exe >/dev/null 2>&1; then
+    # Windows (WSL)
+    echo "$content_to_copy" | clip.exe
+  else
+    echo "${RED}Clipboard utility not found. Could not copy to clipboard.${NC}"
+    return 1
+  fi
+  echo "${GREEN}Copied to clipboard.${NC}"
+  return 0
+}
+
+# --- Function to Display Main Menu ---
+display_main_menu() {
+  clear
+  echo "${BLUE}=== Docker Asset Lifecycle Management ===${NC}"
+  echo "1. ${GREEN}List All Docker Assets${NC}"
+  echo "2. ${YELLOW}Stop Operations${NC}"
+  echo "3. ${RED}Remove Operations${NC}"
+  echo "4. ${CYAN}Export/Copy Operations${NC}"
+  echo "5. ${MAGENTA}Create New Environment${NC}"
+  echo "6. ${GREEN}Start Environment${NC}"
+  echo "7. ${RED}Exit${NC}"
+  echo -n "Enter your choice (1-7): "
+}
+
+# --- Function to List All Docker Assets ---
+list_all_assets() {
+  clear
+  echo "${BLUE}=== Docker Assets Overview ===${NC}"
+
+  echo "${CYAN}=== Running Containers ===${NC}"
+  docker ps --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
+
+  echo "\n${CYAN}=== All Containers (including stopped) ===${NC}"
+  docker ps -a --format "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}"
+
+  echo "\n${CYAN}=== Images ===${NC}"
+  docker images --format "table {{.ID}}\t{{.Repository}}\t{{.Tag}}\t{{.Size}}"
+
+  echo "\n${CYAN}=== Volumes ===${NC}"
+  docker volume ls --format "table {{.Name}}\t{{.Driver}}\t{{.Mountpoint}}"
+
+  echo "\n${CYAN}=== Networks ===${NC}"
+  docker network ls --format "table {{.ID}}\t{{.Name}}\t{{.Driver}}"
+
+  echo -n "${GREEN}Press Enter to continue...${NC}"
+  read
+}
+
+# --- Function to select from a list using keyboard ---
+select_from_list() {
+  local prompt="$1" # First argument is the prompt
+  shift           # Remove prompt from the arguments list
+  local options=("$@") # Remaining arguments are the options
+  local selected=0
+  local key
+  local size=${#options[@]}
+
+  # Handle empty list
+  if [ $size -eq 0 ]; then
+    echo "${RED}No options available.${NC}"
+    sleep 1
+    return 254 # Special return code for empty list
+  fi
+
+  # Terminal capabilities
+  tput civis  # Hide cursor
+
+  while true; do
+    clear
+    echo "${BLUE}${prompt}${NC}" # Display the custom prompt
+    echo "${YELLOW}(Use arrow keys or j/k to navigate, Enter to select, q to cancel)${NC}"
+    echo ""
+
+    for i in "${!options[@]}"; do
+      if [ $i -eq $selected ]; then
+        echo "${GREEN}→ ${options[$i]}${NC}"
+      else
+        echo "  ${options[$i]}"
+      fi
+    done
+
+    # Read a single key without requiring Enter
+    # -s: silent, -k1: read 1 char, -r: raw input (important for escape seq)
+    read -s -k1 -r key
+
+    case $key in
+      $'\e')  # Escape character, likely start of arrow key sequence
+        # Read the next two characters to determine the arrow key
+        read -s -k1 -r key # Should be '['
+        if [[ $key == "[" ]]; then
+          read -s -k1 -r key
+          case $key in
+            "A") # Up arrow
+              ((selected--))
+              if [ $selected -lt 0 ]; then
+                selected=$((size - 1))
+              fi
+              ;;
+            "B") # Down arrow
+              ((selected++))
+              if [ $selected -ge $size ]; then
+                selected=0
+              fi
+              ;;
+          esac
+        fi
+        ;;
+      "k") # Alternative for up
+        ((selected--))
+        if [ $selected -lt 0 ]; then
+          selected=$((size - 1))
+        fi
+        ;;
+      "j") # Alternative for down
+        ((selected++))
+        if [ $selected -ge $size ]; then
+          selected=0
+        fi
+        ;;
+      "") # Enter key (read often returns empty for Enter)
+        tput cnorm  # Show cursor
+        return $selected
+        ;;
+      $'\n') # Explicit Enter key check (sometimes needed)
+        tput cnorm  # Show cursor
+        return $selected
+        ;;
+      "q") # Quit
+        tput cnorm  # Show cursor
+        return 255 # Special return code for quit
+        ;;
+    esac
+  done
+}
+
+
+# --- Function to Stop Operations Menu ---
+stop_operations_menu() {
+  clear
+  echo "${YELLOW}=== Stop Operations ===${NC}"
+  echo "1. ${YELLOW}Stop All Containers${NC}"
+  echo "2. ${YELLOW}Stop Specific Container${NC}"
+  echo "3. ${BLUE}Back to Main Menu${NC}"
+  echo -n "Enter your choice (1-3): "
+  read choice
+
+  case $choice in
+    1)
+      stop_all_containers
+      ;;
+    2)
+      stop_specific_container
+      ;;
+    3)
+      return
+      ;;
+    *)
+      echo "${RED}Invalid choice. Please enter a number between 1 and 3.${NC}"
+      sleep 1
+      stop_operations_menu
+      ;;
+  esac
+}
+
+# --- Function to Stop All Containers ---
+stop_all_containers() {
+  echo "${YELLOW}Stopping all running containers...${NC}"
+  running_containers=$(docker ps -q)
+
+  if [ -z "$running_containers" ]; then
+    echo "${GREEN}No running containers found.${NC}"
+  else
+    docker stop $(docker ps -q)
+    echo "${GREEN}All containers stopped successfully.${NC}"
+  fi
+
+  echo -n "${GREEN}Press Enter to continue...${NC}"
+  read
+}
+
+# --- Function to Stop Specific Container ---
+stop_specific_container() {
+  running_containers=$(docker ps --format "{{.ID}}: {{.Names}} ({{.Image}})")
+
+  if [ -z "$running_containers" ]; then
+    echo "${YELLOW}No running containers found.${NC}"
+    echo -n "${GREEN}Press Enter to continue...${NC}"
+    read
+    return
+  fi
+
+  IFS=$'\n' read -d '' -r -A container_array <<< "$running_containers"
+
+  local prompt="Select a container to stop:"
+  select_from_list "$prompt" "${container_array[@]}"
+  selection=$?
+
+  if [ $selection -eq 255 ]; then
+    echo "${YELLOW}Operation cancelled.${NC}"
+    sleep 1
+    return
+  fi
+  if [ $selection -eq 254 ]; then
+    # No options were available (already handled by initial check, but good practice)
+    return
+  fi
+
+  # Extract container ID
+  container_id=$(echo ${container_array[$selection]} | cut -d':' -f1)
+
+  echo "${YELLOW}Stopping container ${container_id}...${NC}"
+  if docker stop $container_id; then
+    echo "${GREEN}Container stopped successfully.${NC}"
+  else
+    echo "${RED}Failed to stop container.${NC}"
+  fi
+
+  echo -n "${GREEN}Press Enter to continue...${NC}"
+  read
+}
+
+# --- Function for Remove Operations Menu ---
+remove_operations_menu() {
+  clear
+  echo "${RED}=== Remove Operations ===${NC}"
+  echo "1. ${RED}Remove All Containers${NC}"
+  echo "2. ${RED}Remove Specific Container${NC}"
+  echo "3. ${RED}Remove All Images${NC}"
+  echo "4. ${RED}Remove Specific Image${NC}"
+  echo "5. ${RED}Remove All Volumes${NC}"
+  echo "6. ${RED}Remove Specific Volume${NC}"
+  echo "7. ${RED}Perform Full Cleanup (containers, images, volumes, networks)${NC}"
+  echo "8. ${BLUE}Back to Main Menu${NC}"
+  echo -n "Enter your choice (1-8): "
+  read choice
+
+  case $choice in
+    1)
+      remove_all_containers
+      ;;
+    2)
+      remove_specific_container
+      ;;
+    3)
+      remove_all_images
+      ;;
+    4)
+      remove_specific_image
+      ;;
+    5)
+      remove_all_volumes
+      ;;
+    6)
+      remove_specific_volume
+      ;;
+    7)
+      perform_full_cleanup
+      ;;
+    8)
+      return
+      ;;
+    *)
+      echo "${RED}Invalid choice. Please enter a number between 1 and 8.${NC}"
+      sleep 1
+      remove_operations_menu
+      ;;
+  esac
+}
+
+# --- Function to Remove All Containers ---
+remove_all_containers() {
+  echo "${YELLOW}Stopping all containers first...${NC}"
+  docker stop $(docker ps -aq) 2>/dev/null || true
+
+  echo "${RED}Removing all containers...${NC}"
+  removed_ids=$(docker rm $(docker ps -aq) 2>/dev/null)
+  if [ $? -eq 0 ] && [ -n "$removed_ids" ]; then
+    echo "${GREEN}All containers removed successfully.${NC}"
+  elif [ -z "$removed_ids" ]; then
+     echo "${YELLOW}No containers found to remove.${NC}"
+  else
+    echo "${YELLOW}Some containers could not be removed (they might need to be stopped first).${NC}"
+  fi
+
+  echo -n "${GREEN}Press Enter to continue...${NC}"
+  read
+}
+
+# --- Function to Remove Specific Container ---
+remove_specific_container() {
+  all_containers=$(docker ps -a --format "{{.ID}}: {{.Names}} ({{.Image}}) - {{.Status}}")
+
+  if [ -z "$all_containers" ]; then
+    echo "${YELLOW}No containers found.${NC}"
+    echo -n "${GREEN}Press Enter to continue...${NC}"
+    read
+    return
+  fi
+
+  IFS=$'\n' read -d '' -r -A container_array <<< "$all_containers"
+
+  local prompt="Select a container to remove:"
+  select_from_list "$prompt" "${container_array[@]}"
+  selection=$?
+
+  if [ $selection -eq 255 ]; then
+    echo "${YELLOW}Operation cancelled.${NC}"
+    sleep 1
+    return
+  fi
+   if [ $selection -eq 254 ]; then return; fi
+
+  # Extract container ID
+  container_id=$(echo ${container_array[$selection]} | cut -d':' -f1)
+
+  echo "${YELLOW}Stopping container ${container_id} if running...${NC}"
+  docker stop $container_id 2>/dev/null || true
+
+  echo "${RED}Removing container ${container_id}...${NC}"
+  if docker rm $container_id; then
+    echo "${GREEN}Container removed successfully.${NC}"
+  else
+    echo "${RED}Failed to remove container.${NC}"
+  fi
+
+  echo -n "${GREEN}Press Enter to continue...${NC}"
+  read
+}
+
+# --- Function to Remove All Images ---
+remove_all_images() {
+  echo "${RED}Removing all images...${NC}"
+  image_ids=$(docker images -q)
+  if [ -z "$image_ids" ]; then
+      echo "${YELLOW}No images found to remove.${NC}"
+  else
+      if docker rmi $(docker images -q) 2>/dev/null; then
+        echo "${GREEN}All images removed successfully.${NC}"
+      else
+        echo "${YELLOW}Some images could not be removed (they might be in use by stopped containers).${NC}"
+      fi
+  fi
+
+  echo -n "${GREEN}Press Enter to continue...${NC}"
+  read
+}
+
+# --- Function to Remove Specific Image ---
+remove_specific_image() {
+  all_images=$(docker images --format "{{.ID}}: {{.Repository}}:{{.Tag}} ({{.Size}})")
+
+  if [ -z "$all_images" ]; then
+    echo "${YELLOW}No images found.${NC}"
+    echo -n "${GREEN}Press Enter to continue...${NC}"
+    read
+    return
+  fi
+
+  IFS=$'\n' read -d '' -r -A image_array <<< "$all_images"
+
+  local prompt="Select an image to remove:"
+  select_from_list "$prompt" "${image_array[@]}"
+  selection=$?
+
+  if [ $selection -eq 255 ]; then
+    echo "${YELLOW}Operation cancelled.${NC}"
+    sleep 1
+    return
+  fi
+  if [ $selection -eq 254 ]; then return; fi
+
+  # Extract image ID
+  image_id=$(echo ${image_array[$selection]} | cut -d':' -f1)
+
+  echo "${RED}Removing image ${image_id}...${NC}"
+  if docker rmi $image_id; then
+    echo "${GREEN}Image removed successfully.${NC}"
+  else
+    echo "${RED}Failed to remove image. It might be in use by a container (even stopped ones).${NC}"
+  fi
+
+  echo -n "${GREEN}Press Enter to continue...${NC}"
+  read
+}
+
+# --- Function to Remove All Volumes ---
+remove_all_volumes() {
+  echo "${RED}Removing all unused volumes...${NC}"
+  # The 'docker volume prune -f' command inherently handles the case where there are no unused volumes.
+  if docker volume prune -f; then
+    echo "${GREEN}All unused volumes removed successfully.${NC}"
+  else
+    # This case is unlikely unless there's a Docker daemon issue.
+    echo "${RED}Failed to prune volumes.${NC}"
+  fi
+
+  echo -n "${GREEN}Press Enter to continue...${NC}"
+  read
+}
+
+# --- Function to Remove Specific Volume ---
+remove_specific_volume() {
+  all_volumes=$(docker volume ls --format "{{.Name}}: (Driver: {{.Driver}})")
+
+  if [ -z "$all_volumes" ]; then
+    echo "${YELLOW}No volumes found.${NC}"
+    echo -n "${GREEN}Press Enter to continue...${NC}"
+    read
+    return
+  fi
+
+  IFS=$'\n' read -d '' -r -A volume_array <<< "$all_volumes"
+
+  local prompt="Select a volume to remove:"
+  select_from_list "$prompt" "${volume_array[@]}"
+  selection=$?
+
+  if [ $selection -eq 255 ]; then
+    echo "${YELLOW}Operation cancelled.${NC}"
+    sleep 1
+    return
+  fi
+  if [ $selection -eq 254 ]; then return; fi
+
+  # Extract volume name
+  volume_name=$(echo ${volume_array[$selection]} | cut -d':' -f1)
+
+  echo "${RED}Removing volume ${volume_name}...${NC}"
+  if docker volume rm $volume_name; then
+    echo "${GREEN}Volume removed successfully.${NC}"
+  else
+    echo "${RED}Failed to remove volume. It might be in use by a container.${NC}"
+  fi
+
+  echo -n "${GREEN}Press Enter to continue...${NC}"
+  read
+}
+
+# --- Function to Perform Full Cleanup ---
+perform_full_cleanup() {
+  echo "${RED}This will stop and remove ALL containers, images, unused volumes, and unused networks.${NC}"
+  echo -n "${YELLOW}Are you absolutely sure? (y/N): ${NC}"
+  read confirmation
+  if [[ ! "$confirmation" =~ ^[Yy]$ ]]; then
+    echo "${YELLOW}Cleanup cancelled.${NC}"
+    echo -n "${GREEN}Press Enter to continue...${NC}"
+    read
+    return
+  fi
+
+  echo "${RED}Performing full Docker cleanup...${NC}"
+
+  echo "${YELLOW}Stopping all containers...${NC}"
+  docker stop $(docker ps -aq) 2>/dev/null || true
+
+  echo "${RED}Removing all containers...${NC}"
+  docker rm $(docker ps -aq) 2>/dev/null || true
+
+  echo "${RED}Removing all images...${NC}"
+  docker rmi $(docker images -q) 2>/dev/null || true
+
+  echo "${RED}Removing all unused volumes...${NC}"
+  docker volume prune -f 2>/dev/null || true
+
+  echo "${RED}Removing all unused networks...${NC}"
+  docker network prune -f 2>/dev/null || true
+
+  echo "${GREEN}Full cleanup completed.${NC}"
+
+  echo -n "${GREEN}Press Enter to continue...${NC}"
+  read
+}
+
+# --- Function for Export/Copy Operations Menu ---
+export_copy_operations_menu() {
+  clear
+  echo "${CYAN}=== Export/Copy Operations ===${NC}"
+  echo "1. ${CYAN}Generate docker-compose fragment for Container${NC}"
+  echo "2. ${CYAN}Copy PostgreSQL Connection URL${NC}"
+  echo "3. ${BLUE}Back to Main Menu${NC}"
+  echo -n "Enter your choice (1-3): "
+  read choice
+
+  case $choice in
+    1)
+      generate_docker_compose_fragment
+      ;;
+    2)
+      copy_postgres_url
+      ;;
+    3)
+      return
+      ;;
+    *)
+      echo "${RED}Invalid choice. Please enter a number between 1 and 3.${NC}"
+      sleep 1
+      export_copy_operations_menu
+      ;;
+  esac
+}
+
+# --- Function to Generate docker-compose.yml fragment ---
+generate_docker_compose_fragment() {
+  all_containers=$(docker ps -a --format "{{.ID}}: {{.Names}} ({{.Image}})")
+
+  if [ -z "$all_containers" ]; then
+    echo "${YELLOW}No containers found.${NC}"
+    echo -n "${GREEN}Press Enter to continue...${NC}"
+    read
+    return
+  fi
+
+  IFS=$'\n' read -d '' -r -A container_array <<< "$all_containers"
+
+  local prompt="Select container for compose fragment:"
+  select_from_list "$prompt" "${container_array[@]}"
+  selection=$?
+
+  if [ $selection -eq 255 ]; then
+    echo "${YELLOW}Operation cancelled.${NC}"
+    sleep 1
+    return
+  fi
+  if [ $selection -eq 254 ]; then return; fi
+
+  # Extract container ID
+  container_id=$(echo ${container_array[$selection]} | cut -d':' -f1)
+  # Get container name without leading slash
+  container_name=$(docker inspect --format '{{.Name}}' $container_id | sed 's#^/##')
+
+  echo "${CYAN}Generating docker-compose fragment for container ${container_name} (${container_id})...${NC}"
+  echo "${YELLOW}Note: This is a best-effort generation and may require manual adjustments.${NC}"
+
+  # Use docker inspect and format output as YAML-like structure
+  # This is complex to get perfect, focusing on common attributes
+  compose_fragment=""
+  compose_fragment+="  ${container_name}:\n"
+
+  # Image
+  image=$(docker inspect --format='{{.Config.Image}}' $container_id)
+  compose_fragment+="    image: ${image}\n"
+
+  # Container Name (optional, as service name often suffices)
+  # compose_fragment+="    container_name: ${container_name}\n"
+
+  # Ports
+  ports_json=$(docker inspect --format='{{json .NetworkSettings.Ports}}' $container_id)
+  if [[ "$ports_json" != "null" && "$ports_json" != "{}" ]]; then
+    compose_fragment+="    ports:\n"
+    # Using jq for robust parsing if available
+    if command -v jq >/dev/null 2>&1; then
+       compose_fragment+=$(echo "$ports_json" | jq -r 'to_entries[] | select(.value != null) | .value[] | "      - \"\(.HostPort):\((.key | split("/"))[0])\""')"\n"
+    else
+        # Fallback basic parsing (less robust)
+        echo "${YELLOW}jq not found, port parsing might be incomplete.${NC}"
+        # This is a very basic attempt, complex mappings might fail
+        ports_str=$(docker inspect --format '{{range $p, $conf := .NetworkSettings.Ports}}{{range $conf}}{{.HostPort}}:{{$p}} {{end}}{{end}}' $container_id | sed 's#/tcp##g' | sed 's#/udp##g')
+         for p in $ports_str; do
+            compose_fragment+="      - \"${p}\"\n"
+         done
+    fi
+  fi
+
+
+  # Environment Variables
+  env_vars=$(docker inspect --format='{{range .Config.Env}}      - {{println .}}{{end}}' $container_id)
+  if [ -n "$env_vars" ]; then
+    # Check if env_vars contains more than just newline/whitespace
+    if [[ "$env_vars" =~ [^[:space:]] ]]; then
+        compose_fragment+="    environment:\n${env_vars}"
+    fi
+  fi
+
+  # Volumes
+  mounts_json=$(docker inspect --format='{{json .Mounts}}' $container_id)
+   if [[ "$mounts_json" != "null" && "$mounts_json" != "[]" ]]; then
+     compose_fragment+="    volumes:\n"
+     if command -v jq >/dev/null 2>&1; then
+        compose_fragment+=$(echo "$mounts_json" | jq -r '.[] | "      - \(.Source // .Name):\(.Destination)\(.RW | if . == false then ":ro" else "" end)"')"\n"
+     else
+        echo "${YELLOW}jq not found, volume parsing might be basic.${NC}"
+        # Basic fallback
+        volumes_str=$(docker inspect --format '{{range .Mounts}}{{.Source}}:{{.Destination}}{{if not .RW}}:ro{{end}} {{end}}' $container_id)
+         for v in $volumes_str; do
+            compose_fragment+="      - \"${v}\"\n"
+         done
+     fi
+   fi
+
+  # Restart Policy
+  restart_policy=$(docker inspect --format='{{.HostConfig.RestartPolicy.Name}}' $container_id)
+  if [[ -n "$restart_policy" && "$restart_policy" != "no" ]]; then
+    compose_fragment+="    restart: ${restart_policy}\n"
+  fi
+
+  # Networks (Basic - just lists connected networks)
+  networks_json=$(docker inspect --format='{{json .NetworkSettings.Networks}}' $container_id)
+  if [[ "$networks_json" != "null" && "$networks_json" != "{}" ]]; then
+     if command -v jq >/dev/null 2>&1; then
+        network_names=$(echo "$networks_json" | jq -r 'keys | .[]')
+        if [[ $(echo "$network_names" | wc -l) -gt 1 || $(echo "$network_names") != "bridge" ]]; then
+             compose_fragment+="    networks:\n"
+             compose_fragment+=$(echo "$network_names" | sed 's/^/      - /')"\n"
+             echo "${YELLOW}Note: Network definitions need to be added separately at the top level.${NC}"
+        fi
+     fi
+   fi
+
+  # Display and copy to clipboard
+  echo "${GREEN}--- Generated docker-compose fragment ---${NC}"
+  echo -e "$compose_fragment" # Use -e to interpret escape sequences like \n
+  echo "${GREEN}---------------------------------------${NC}"
+  copy_to_clipboard "$compose_fragment"
+
+  echo -n "${GREEN}Press Enter to continue...${NC}"
+  read
+}
+
+
+# --- Function to Copy PostgreSQL Connection URL ---
+copy_postgres_url() {
+  # Find PostgreSQL containers (running or stopped) based on image name
+  postgres_containers=$(docker ps -a --filter "ancestor=postgres" --format "{{.ID}}: {{.Names}} ({{.Image}})")
+
+  if [ -z "$postgres_containers" ]; then
+    echo "${YELLOW}No PostgreSQL containers (based on 'postgres' image) found.${NC}"
+    echo -n "${GREEN}Press Enter to continue...${NC}"
+    read
+    return
+  fi
+
+  IFS=$'\n' read -d '' -r -A postgres_array <<< "$postgres_containers"
+
+  local prompt="Select a PostgreSQL container:"
+  select_from_list "$prompt" "${postgres_array[@]}"
+  selection=$?
+
+  if [ $selection -eq 255 ]; then
+    echo "${YELLOW}Operation cancelled.${NC}"
+    sleep 1
+    return
+  fi
+  if [ $selection -eq 254 ]; then return; fi
+
+  # Extract container ID
+  container_id=$(echo ${postgres_array[$selection]} | cut -d':' -f1)
+  container_name=$(docker inspect --format '{{.Name}}' $container_id | sed 's#^/##')
+
+  echo "${CYAN}Getting connection details for ${container_name}...${NC}"
+
+  # Get host port mapping for internal port 5432
+  # Handles cases where multiple ports might be exposed
+  host_port=$(docker inspect --format '{{range $p, $conf := .NetworkSettings.Ports}}{{if eq $p "5432/tcp"}}{{range $conf}}{{.HostPort}}{{end}}{{end}}{{end}}' $container_id)
+
+  # If no explicit host port mapping, check if it's running on a user-defined network
+  if [ -z "$host_port" ]; then
+      # Check if the container is running. If not, we can't reliably get connection info.
+      status=$(docker inspect --format '{{.State.Status}}' $container_id)
+      if [ "$status" != "running" ]; then
+          echo "${YELLOW}Container ${container_name} is not running. Cannot determine connection URL without port mapping.${NC}"
+          echo -n "${GREEN}Press Enter to continue...${NC}"
+          read
+          return
+      fi
+
+      # If running but no port mapped, it likely relies on internal Docker networking
+      echo "${YELLOW}Container ${container_name} does not have port 5432 mapped to the host.${NC}"
+      echo "${YELLOW}It might be intended for internal Docker network access only.${NC}"
+      # We could try getting the internal IP, but that's less useful for external access
+      internal_ip=$(docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $container_id)
+      echo "${CYAN}Internal IP (use from other containers in the same network): ${internal_ip}${NC}"
+      echo -n "${GREEN}Press Enter to continue...${NC}"
+      read
+      return
+  fi
+
+  # Extract environment variables for username, password, and database
+  env_vars=$(docker inspect --format '{{range .Config.Env}}{{.}}{{"\n"}}{{end}}' $container_id)
+
+  # Set defaults, then override from env vars
+  pg_user="postgres"
+  pg_password="password" # Use a more common default or prompt? Let's use 'password'
+  pg_db="postgres"
+
+  # Parse environment variables simply
+  while IFS='=' read -r key value; do
+    # Trim potential whitespace around value (though Docker envs usually don't have it)
+    value=$(echo "$value" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    case "$key" in
+      POSTGRES_USER) pg_user="$value" ;;
+      POSTGRES_PASSWORD) pg_password="$value" ;;
+      POSTGRES_DB) pg_db="$value" ;;
+    esac
+  done <<< "$env_vars"
+
+  # Construct connection URL using localhost and the found host port
+  pg_url="postgresql://${pg_user}:${pg_password}@localhost:${host_port}/${pg_db}"
+
+  # Display and copy
+  echo "\n${GREEN}--- PostgreSQL Connection URL ---${NC}"
+  echo "${pg_url}"
+  echo "${GREEN}-------------------------------${NC}"
+
+  # Copy to clipboard
+  copy_to_clipboard "$pg_url"
+
+  # Also display DrizzleORM compatible URL for .env
+  echo "\n${GREEN}--- DrizzleORM .env variable ---${NC}"
+  echo "DATABASE_URL=\"${pg_url}\"" # Quoting might be safer for passwords with special chars
+  echo "${GREEN}-------------------------------${NC}"
+
+
+  echo -n "${GREEN}Press Enter to continue...${NC}"
+  read
+}
+
+# --- Function to Start Environment Menu ---
+start_environment_menu() {
+  clear
+  echo "${GREEN}=== Start Environment ===${NC}"
+  echo "1. ${GREEN}Start Docker Compose in Current Directory${NC}"
+  echo "2. ${GREEN}Start Specific Container${NC}"
+  echo "3. ${BLUE}Back to Main Menu${NC}"
+  echo -n "Enter your choice (1-3): "
+  read choice
+
+  case $choice in
+    1)
+      start_docker_compose
+      ;;
+    2)
+      start_specific_container
+      ;;
+    3)
+      return
+      ;;
+    *)
+      echo "${RED}Invalid choice. Please enter a number between 1 and 3.${NC}"
+      sleep 1
+      start_environment_menu
+      ;;
+  esac
+}
+
+# --- Function to Start Docker Compose ---
+start_docker_compose() {
+  local compose_file=""
+  if [ -f "docker-compose.yml" ]; then
+    compose_file="docker-compose.yml"
+  elif [ -f "docker-compose.yaml" ]; then
+    compose_file="docker-compose.yaml"
+  else
+    # Allow selecting a compose file
+    echo "${YELLOW}No docker-compose.yml or .yaml found in current directory.${NC}"
+    compose_files=$(ls -1 *docker-compose*.y*ml 2>/dev/null)
+     if [ -z "$compose_files" ]; then
+        echo "${RED}No compose files found in current directory.${NC}"
+        echo -n "${GREEN}Press Enter to continue...${NC}"; read
+        return
+     fi
+      IFS=$'\n' read -d '' -r -A compose_array <<< "$compose_files"
+      local prompt="Select a Docker Compose file to start:"
+      select_from_list "$prompt" "${compose_array[@]}"
+      selection=$?
+      if [ $selection -eq 255 ] || [ $selection -eq 254 ]; then
+        echo "${YELLOW}Operation cancelled.${NC}"; sleep 1; return
+      fi
+      compose_file="${compose_array[$selection]}"
+  fi
+
+  echo "${GREEN}Starting Docker Compose using ${compose_file}...${NC}"
+  # Use the detected Docker Compose command
+  if $DOCKER_COMPOSE_CMD -f "$compose_file" up -d; then
+    echo "${GREEN}Docker Compose started successfully.${NC}"
+    echo "\n${CYAN}Running services defined in ${compose_file}:${NC}"
+    $DOCKER_COMPOSE_CMD -f "$compose_file" ps
+  else
+    echo "${RED}Error: Docker Compose failed to start using ${compose_file}.${NC}"
+  fi
+
+  echo -n "${GREEN}Press Enter to continue...${NC}"
+  read
+}
+
+# --- Function to Start Specific Container ---
+start_specific_container() {
+  # Filter only stopped (exited) containers
+  stopped_containers=$(docker ps -a --filter "status=exited" --format "{{.ID}}: {{.Names}} ({{.Image}})")
+
+  if [ -z "$stopped_containers" ]; then
+    echo "${YELLOW}No stopped containers found to start.${NC}"
+    echo -n "${GREEN}Press Enter to continue...${NC}"
+    read
+    return
+  fi
+
+  IFS=$'\n' read -d '' -r -A container_array <<< "$stopped_containers"
+
+  local prompt="Select a stopped container to start:"
+  select_from_list "$prompt" "${container_array[@]}"
+  selection=$?
+
+  if [ $selection -eq 255 ]; then
+    echo "${YELLOW}Operation cancelled.${NC}"
+    sleep 1
+    return
+  fi
+  if [ $selection -eq 254 ]; then return; fi
+
+  # Extract container ID
+  container_id=$(echo ${container_array[$selection]} | cut -d':' -f1)
+
+  echo "${GREEN}Starting container ${container_id}...${NC}"
+  if docker start $container_id; then
+    echo "${GREEN}Container started successfully.${NC}"
+    # Show status briefly
+    docker ps --filter "id=${container_id}"
+  else
+    echo "${RED}Failed to start container ${container_id}.${NC}"
+    # Try showing logs
+    echo "${YELLOW}Showing last 20 lines of logs for ${container_id}:${NC}"
+    docker logs --tail 20 $container_id
+  fi
+
+  echo -n "${GREEN}Press Enter to continue...${NC}"
+  read
+}
+
+
+# --- Function to Create New Environment Menu ---
+create_environment_menu() {
+  clear
+  echo "${MAGENTA}=== Create New Environment ===${NC}"
+  echo "1. ${MAGENTA}Create Next.js + PostgreSQL (Drizzle Ready) Environment${NC}"
+  echo "2. ${MAGENTA}Create PostgreSQL Only Environment${NC}"
+  echo "3. ${BLUE}Back to Main Menu${NC}"
+  echo -n "Enter your choice (1-3): "
+  read choice
+
+  case $choice in
+    1)
+      create_nextjs_postgres_environment
+      ;;
+    2)
+      create_postgres_environment
+      ;;
+    3)
+      return
+      ;;
+    *)
+      echo "${RED}Invalid choice. Please enter a number between 1 and 3.${NC}"
+      sleep 1
+      create_environment_menu
+      ;;
+  esac
+}
+
+# --- Function to Create PostgreSQL Environment ---
+create_postgres_environment() {
+  clear
+  echo "${MAGENTA}=== Create PostgreSQL Only Environment ===${NC}"
+
+  # Get configuration details
+  local project_name pg_port pg_db pg_user pg_password compose_file pg_url
+  echo -n "Enter project name (alphanumeric, no spaces, e.g., myproject): "
+  read project_name
+  # Basic validation
+  if ! [[ "$project_name" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+      echo "${RED}Invalid project name. Use only letters, numbers, underscores, hyphens.${NC}"
+      sleep 2; create_postgres_environment; return
+  fi
+
+  echo -n "Enter Host PostgreSQL port (default: 5432): "
+  read pg_port
+  pg_port=${pg_port:-5432}
+  # Basic validation
+   if ! [[ "$pg_port" =~ ^[0-9]+$ ]] || [ "$pg_port" -lt 1 ] || [ "$pg_port" -gt 65535 ]; then
+       echo "${RED}Invalid port number.${NC}"; sleep 2; create_postgres_environment; return
+   fi
+
+  echo -n "Enter PostgreSQL database name (default: ${project_name}_db): "
+  read pg_db
+  pg_db=${pg_db:-${project_name}_db}
+
+  echo -n "Enter PostgreSQL username (default: postgres): "
+  read pg_user
+  pg_user=${pg_user:-postgres}
+
+  echo -n "Enter PostgreSQL password (default: password): "
+  read pg_password
+  pg_password=${pg_password:-password}
+  echo "${YELLOW}Warning: Using default or simple passwords is insecure.${NC}"
+
+
+  # Create docker-compose.yml
+  compose_file="${project_name}-postgres-compose.yml"
+  local volume_name="${project_name}_postgres_data"
+  local container_name="${project_name}_postgres"
+
+  cat > "$compose_file" << EOL
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine # Using a specific version is good practice
+    container_name: ${container_name}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${pg_user}
+      POSTGRES_PASSWORD: ${pg_password}
+      POSTGRES_DB: ${pg_db}
+    ports:
+      - "${pg_port}:5432" # Map host port to container port 5432
+    volumes:
+      - ${volume_name}:/var/lib/postgresql/data
+
+volumes:
+  ${volume_name}:
+    name: ${volume_name} # Explicit volume name
+EOL
+
+  echo "${GREEN}Created Docker Compose file: ${compose_file}${NC}"
+
+  # Start the environment
+  echo "${MAGENTA}Starting PostgreSQL environment using ${compose_file}...${NC}"
+  if $DOCKER_COMPOSE_CMD -f "$compose_file" up -d; then
+    echo "${GREEN}PostgreSQL environment started successfully.${NC}"
+
+    # Generate connection URL
+    pg_url="postgresql://${pg_user}:${pg_password}@localhost:${pg_port}/${pg_db}"
+
+    # Display connection details
+    echo "\n${CYAN}=== PostgreSQL Connection Details ===${NC}"
+    echo "  Host: localhost"
+    echo "  Port: ${pg_port}"
+    echo "  Database: ${pg_db}"
+    echo "  Username: ${pg_user}"
+    echo "  Password: ${pg_password}"
+    echo "${CYAN}-----------------------------------${NC}"
+
+    echo "\n${CYAN}PostgreSQL Connection URL (copied to clipboard):${NC}"
+    echo "${pg_url}"
+
+    # For DrizzleORM
+    echo "\n${CYAN}DrizzleORM .env configuration:${NC}"
+    echo "DATABASE_URL=\"${pg_url}\""
+    echo "${CYAN}-----------------------------------${NC}"
+
+    # Copy to clipboard
+    copy_to_clipboard "$pg_url"
+  else
+    echo "${RED}Failed to start PostgreSQL environment using ${compose_file}.${NC}"
+  fi
+
+  echo -n "${GREEN}Press Enter to continue...${NC}"
+  read
+}
+
+
+# --- Function to Create Next.js + PostgreSQL + DrizzleORM Environment ---
+create_nextjs_postgres_environment() {
+  clear
+  echo "${MAGENTA}=== Create Next.js + PostgreSQL (Drizzle Ready) Environment ===${NC}"
+
+  # --- Configuration ---
+  local project_name pg_port nextjs_port pg_db pg_user pg_password
+  local compose_file nextjs_dir dockerfile_path pg_url nextjs_url
+  local pg_container_name nextjs_container_name pg_volume_name
+
+  echo -n "Enter base project name (alphanumeric, no spaces, e.g., myapp): "
+  read project_name
+  if ! [[ "$project_name" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+      echo "${RED}Invalid project name. Use only letters, numbers, underscores, hyphens.${NC}"
+      sleep 2; create_nextjs_postgres_environment; return
+  fi
+
+  echo -n "Enter Host PostgreSQL port (default: 5433 to avoid conflict): "
+  read pg_port
+  pg_port=${pg_port:-5433}
+   if ! [[ "$pg_port" =~ ^[0-9]+$ ]] || [ "$pg_port" -lt 1 ] || [ "$pg_port" -gt 65535 ]; then
+       echo "${RED}Invalid port number.${NC}"; sleep 2; create_nextjs_postgres_environment; return
+   fi
+
+  echo -n "Enter Host Next.js port (default: 3000): "
+  read nextjs_port
+  nextjs_port=${nextjs_port:-3000}
+  if ! [[ "$nextjs_port" =~ ^[0-9]+$ ]] || [ "$nextjs_port" -lt 1 ] || [ "$nextjs_port" -gt 65535 ]; then
+       echo "${RED}Invalid port number.${NC}"; sleep 2; create_nextjs_postgres_environment; return
+   fi
+
+  echo -n "Enter PostgreSQL database name (default: ${project_name}_db): "
+  read pg_db
+  pg_db=${pg_db:-${project_name}_db}
+
+  echo -n "Enter PostgreSQL username (default: postgres): "
+  read pg_user
+  pg_user=${pg_user:-postgres}
+
+  echo -n "Enter PostgreSQL password (default: password): "
+  read pg_password
+  pg_password=${pg_password:-password}
+  echo "${YELLOW}Warning: Using default or simple passwords is insecure.${NC}"
+
+
+  # --- Define Names and Paths ---
+  compose_file="${project_name}-nextjs-pg-compose.yml"
+  nextjs_dir="./${project_name}_nextjs_app" # Directory for Next.js source and Dockerfile
+  dockerfile_path="${nextjs_dir}/Dockerfile"
+  pg_container_name="${project_name}_postgres"
+  nextjs_container_name="${project_name}_nextjs"
+  pg_volume_name="${project_name}_postgres_data"
+
+  # --- Create Next.js App Directory and Dockerfile ---
+  echo "${CYAN}Creating directory for Next.js app: ${nextjs_dir}${NC}"
+  mkdir -p "$nextjs_dir"
+  if [ $? -ne 0 ]; then
+      echo "${RED}Failed to create directory ${nextjs_dir}.${NC}"
+      sleep 2; return
+  fi
+
+  echo "${CYAN}Generating Dockerfile: ${dockerfile_path}${NC}"
+  cat > "$dockerfile_path" << EOL
+# Use an official Node runtime as a parent image
+FROM node:18-alpine AS base
+
+# Set the working directory
+WORKDIR /app
+
+# Install dependencies based on the preferred package manager
+# Detect package manager lock file and install dependencies
+COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
+RUN \
+  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
+  elif [ -f package-lock.json ]; then npm ci; \
+  elif [ -f pnpm-lock.yaml ]; then yarn global add pnpm && pnpm i --frozen-lockfile; \
+  else echo "Lockfile not found." && exit 1; \
+  fi
+
+# Copy the rest of the application code
+COPY . .
+
+# Expose the port the app runs on (should match Next.js config, usually 3000)
+EXPOSE 3000
+
+# Set NODE_ENV to production by default (can be overridden)
+ENV NODE_ENV=development
+
+# Command to run the app in development mode (adjust if needed)
+# Use 'npm run build' and 'npm run start' for production builds
+CMD ["npm", "run", "dev"]
+EOL
+
+  # --- Generate docker-compose.yml ---
+  echo "${CYAN}Generating Docker Compose file: ${compose_file}${NC}"
+
+  # Internal DATABASE_URL uses the service name ('postgres' in this case)
+  local internal_db_url="postgresql://${pg_user}:${pg_password}@${pg_container_name}:5432/${pg_db}"
+
+  cat > "$compose_file" << EOL
+version: '3.8'
+
+services:
+  # PostgreSQL Service
+  ${pg_container_name}:
+    image: postgres:15-alpine
+    container_name: ${pg_container_name}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${pg_user}
+      POSTGRES_PASSWORD: ${pg_password}
+      POSTGRES_DB: ${pg_db}
+    ports:
+      - "${pg_port}:5432" # Map host port to container's 5432
+    volumes:
+      - ${pg_volume_name}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${pg_user} -d ${pg_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Next.js Service
+  ${nextjs_container_name}:
+    container_name: ${nextjs_container_name}
+    build:
+      context: ${nextjs_dir} # Path to the directory containing the Dockerfile
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${nextjs_port}:3000" # Map host port to container's exposed port 3000
+    volumes:
+      # Mount the Next.js app directory into the container
+      # Exclude node_modules and .next to use container's versions
+      - ${nextjs_dir}:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      # Use the internal DB URL for communication between containers
+      DATABASE_URL: "${internal_db_url}"
+      # Add any other environment variables your Next.js app needs
+      # Example: NEXT_PUBLIC_API_URL=http://api.example.com
+      NODE_ENV: development # Ensure dev mode for hot-reloading
+    depends_on:
+      ${pg_container_name}: # Wait for postgres to be healthy
+        condition: service_healthy
+
+volumes:
+  ${pg_volume_name}:
+    name: ${pg_volume_name} # Explicit volume name for DB data persistence
+EOL
+
+  # --- Instructions for User ---
+  echo "\n${YELLOW}--- Important Next Steps ---${NC}"
+  echo "1. Place your Next.js project source code inside the '${YELLOW}${nextjs_dir}${NC}' directory."
+  echo "   (Or initialize a new one: 'cd ${nextjs_dir} && npx create-next-app@latest .')"
+  echo "2. Ensure your Next.js app runs on port ${YELLOW}3000${NC} internally (this is the default)."
+  echo "3. For DrizzleORM (and potentially other DB clients in Next.js), create a '${YELLOW}.env.local${NC}' file inside '${YELLOW}${nextjs_dir}${NC}' with the following content:"
+  local external_db_url="postgresql://${pg_user}:${pg_password}@localhost:${pg_port}/${pg_db}"
+  echo "${WHITE}   ---------------------------"
+  echo "${WHITE}   DATABASE_URL=\"${external_db_url}\""
+  echo "${WHITE}   ---------------------------${NC}"
+  echo "   ${YELLOW}Note:${NC} Use 'localhost:${pg_port}' in .env.local for access from your host machine (e.g., drizzle-kit commands)."
+  echo "   The container itself uses the internal URL (${WHITE}DATABASE_URL=\"${internal_db_url}\"${NC}) set in docker-compose."
+  echo "--------------------------------"
+
+
+  # --- Start the Environment ---
+  echo "\n${MAGENTA}Starting Next.js + PostgreSQL environment using ${compose_file}...${NC}"
+  if $DOCKER_COMPOSE_CMD -f "$compose_file" up -d --build; then # Add --build to build the nextjs image
+    echo "${GREEN}Environment started successfully!${NC}"
+
+    # Construct URLs for display
+    nextjs_url="http://localhost:${nextjs_port}"
+
+    # Display connection details
+    echo "\n${CYAN}=== Environment Details ===${NC}"
+    echo "  Next.js App URL: ${nextjs_url}"
+    echo "  PostgreSQL Host Port: ${pg_port}"
+    echo "  PostgreSQL DB: ${pg_db}"
+    echo "  PostgreSQL User: ${pg_user}"
+    echo "  PostgreSQL Pass: ${pg_password}"
+    echo "${CYAN}---------------------------${NC}"
+
+    echo "\n${CYAN}PostgreSQL Connection URL (for host access, copied to clipboard):${NC}"
+    echo "${external_db_url}"
+    copy_to_clipboard "$external_db_url"
+    echo "${CYAN}---------------------------${NC}"
+
+  else
+    echo "${RED}Failed to start the environment using ${compose_file}.${NC}"
+    echo "${RED}Check for errors in the Dockerfile ('${dockerfile_path}') or docker-compose file ('${compose_file}').${NC}"
+    echo "${RED}Also ensure you have placed valid 'package.json' etc. in '${nextjs_dir}'.${NC}"
+  fi
+
+  echo -n "${GREEN}Press Enter to continue...${NC}"
+  read
+}
+
+
+# --- Main Loop ---
+check_requirements # Run checks at the beginning
+
+while true
+do
+  display_main_menu
+  read choice
+
+  case $choice in
+    1)
+      list_all_assets
+      ;;
+    2)
+      stop_operations_menu
+      ;;
+    3)
+      remove_operations_menu
+      ;;
+    4)
+      export_copy_operations_menu
+      ;;
+    5)
+      create_environment_menu
+      ;;
+    6)
+      start_environment_menu
+      ;;
+    7)
+      echo "${BLUE}Exiting Docker Management Tool.${NC}"
+      exit 0
+      ;;
+    *)
+      echo "${RED}Invalid choice. Please enter a number between 1 and 7.${NC}"
+      sleep 1 # Pause briefly
+      ;;
+  esac
+
+  # No explicit pause here, functions handle their own "Press Enter" prompts
+done
