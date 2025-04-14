@@ -1,0 +1,73 @@
+#!/bin/bash
+
+# Colors for terminal output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# Function for git commit
+gc() {
+    # If no arguments provided, show help
+    if [ $# -eq 0 ]; then
+        echo -e "${YELLOW}Usage:${NC}"
+        echo -e "  ${GREEN}gc <commit message>${NC} - Commits all changes with the provided message"
+        echo -e "  ${GREEN}gc <commit message> <file>${NC} - Commits specific file with the provided message"
+        return 0
+    fi
+    
+    # Check if last argument is a file
+    local last_arg="${@: -1}"
+    local message=""
+    local file=""
+    
+    if [ -e "$last_arg" ]; then
+        # Last argument is a file
+        file="$last_arg"
+        # Get all arguments except the last one as the message
+        message="${@:1:$#-1}"
+        echo -e "${BLUE}Staging file:${NC} $file"
+        git add "$file"
+    else
+        # All arguments form the commit message
+        message="$@"
+        echo -e "${BLUE}Staging all changes${NC}"
+        git add .
+    fi
+    
+    echo -e "${GREEN}Committing with message:${NC} $message"
+    git commit -m "$message"
+    
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✓ Commit successful!${NC}"
+    else
+        echo -e "${RED}✗ Commit failed${NC}"
+    fi
+}
+
+# Function for git push
+gcp() {
+    echo -e "${BLUE}Pushing changes to remote...${NC}"
+    
+    # Get current branch
+    local branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}✗ Not in a git repository or no branch available${NC}"
+        return 1
+    fi
+    
+    echo -e "${CYAN}Current branch:${NC} $branch"
+    
+    # Push to remote
+    git push origin $branch
+    
+    if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✓ Successfully pushed to origin/$branch!${NC}"
+    else
+        echo -e "${RED}✗ Push failed${NC}"
+        echo -e "${YELLOW}Tip: If this is a new branch, try ${CYAN}git push -u origin $branch${NC}"
+    fi
+}

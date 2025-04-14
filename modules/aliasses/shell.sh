@@ -15,7 +15,6 @@ alias ..='cd ..'
 alias ...='cd ../..'
 alias ....='cd ../..'
 
-
 alias vim='nvim'
 
 alias dotfiles='cursor ~/.config/dotfiles'

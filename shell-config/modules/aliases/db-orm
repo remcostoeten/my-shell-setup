@@ -1,0 +1,8 @@
+#!/bin/bash
+
+alias dk='pnpm drizzle-kit'
+alias push='dk push'
+alias generate='dk generate'
+alias migrate='dk migrate'
+alias studio='dk studio'
+alias drop='pnpm drizzle-kit drop' 

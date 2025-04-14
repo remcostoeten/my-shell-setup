@@ -1,0 +1,21 @@
+#!/bin/bash
+# Environment Injector
+# Sources all environment variables and package configurations
+
+# Source all custom environment variables
+if [ -d "$HOME/dotfiles/enviorment/custom" ]; then
+  for file in "$HOME/dotfiles/enviorment/custom"/*; do
+    if [ -f "$file" ]; then
+      source "$file"
+    fi
+  done
+fi
+
+# Source all package configurations
+if [ -d "$HOME/dotfiles/packages" ]; then
+  for file in "$HOME/dotfiles/packages"/*; do
+    if [ -f "$file" ]; then
+      source "$file"
+    fi
+  done
+fi

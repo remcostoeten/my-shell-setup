@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Display welcome message
+source "$DOTFILES_PATH/shell-config/initialize/welcome"
+
+# Source colors for global availability
+source "$DOTFILES_PATH/shell-config/initialize/colors"
+
+# Source all injectors
+for injector in "$DOTFILES_PATH/shell-config/injectors"/*; do
+    if [ -f "$injector" ]; then
+        source "$injector"
+    fi
+done 

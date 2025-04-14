@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Get the dotfiles path from the current directory
+DOTFILES_PATH="$(git rev-parse --show-toplevel)"
+
+# Run the versioning script
+"$DOTFILES_PATH/shell-config/initialize/versioning"
+
+# Add the updated version.txt to the commit
+git add "$DOTFILES_PATH/shell-config/version.txt"

@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Define the directory containing the alias files
+alias_dir="$DOTFILES_PATH/shell-config/modules/aliases"
+
+# Function to safely source files
+source_file() {
+    local file="$1"
+    if [ -f "$file" ]; then
+        # Save current directory
+        pushd "$(dirname "$file")" >/dev/null || return
+        # Source the file
+        . "./$(basename "$file")"
+        # Return to original directory
+        popd >/dev/null || return
+    fi
+}
+
+# Check if the directory exists
+if [ -d "$alias_dir" ]; then
+    # Loop through all entries in the directory
+    for file in "$alias_dir"/*; do
+        if [ -f "$file" ]; then
+            source_file "$file"
+        fi
+    done
+else
+    echo "${Yellow}Warning: Alias directory not found: $alias_dir${Color_Off}" >&2
+    # Create the directory if it doesn't exist
+    mkdir -p "$alias_dir"
+fi
+
+# Clean up
+unset alias_dir
+unset -f source_file

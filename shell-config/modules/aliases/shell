@@ -1,0 +1,74 @@
+#!/bin/bash
+
+# Shell configuration shortcuts
+alias zsh='nvim ~/.zshrc'
+alias szsh='source ~/.zshrc'
+alias czsh='cursor ~/.config/dotfiles'
+
+# System shortcuts
+alias c='clear'
+alias x='exit'
+alias h='history'
+alias j='jobs -l'
+alias path='echo -e ${PATH//:/\\n}'
+
+# Process management
+alias psa='ps aux'
+alias psg='ps aux | grep'
+alias ka='killall'
+alias k9='kill -9'
+
+# File operations
+alias rm='rm -rf'
+alias cp='cp -r'
+alias mv='mv -r'
+alias mkdir='mkdir -p'
+
+# Directory navigation
+alias cd='cd -P'
+alias cd..='cd ..'
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../..'
+
+# File listing
+alias ls='ls -G'
+alias ll='ls -la'
+alias la='ls -lah'
+alias l='ls -l'
+alias lsd='ls -l | grep "^d"'
+
+# Grep with color
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
+
+# Quick edit
+alias e='$EDITOR'
+
+# System info
+alias df='df -h'
+alias du='du -h'
+alias free='free -m'
+alias meminfo='free -m -l -t'
+
+# Network
+alias ports='netstat -tulanp'
+alias myip='curl http://ipecho.net/plain; echo'
+
+# Date/Time
+alias now='date +"%T"'
+alias nowdate='date +"%d-%m-%Y"'
+
+# Safety nets
+alias chown='chown --preserve-root'
+alias chmod='chmod --preserve-root'
+alias chgrp='chgrp --preserve-root'
+
+# New aliases
+alias vim='nvim'
+
+alias dotfiles='cursor ~/.config/dotfiles'
+alias godotfiles='cd ~/.config/dotfiles'
+
+alias create='touch $1 && chmod +x $1' 

@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# Node.js related
+alias ni='npm install'
+alias nid='npm install --save-dev'
+alias nig='npm install -g'
+alias nr='npm run'
+alias nrs='npm run start'
+alias nrd='npm run dev'
+alias nrb='npm run build'
+alias nrt='npm run test'
+
+# Yarn related
+alias yi='yarn install'
+alias ya='yarn add'
+alias yad='yarn add --dev'
+alias yr='yarn run'
+alias yrs='yarn start'
+alias yrd='yarn dev'
+alias yrb='yarn build'
+alias yrt='yarn test'
+
+# PNPM related
+alias pi='pnpm install'
+alias pa='pnpm add'
+alias pad='pnpm add -D'
+alias pr='pnpm run'
+alias prs='pnpm run start'
+alias prd='pnpm run dev'
+alias prb='pnpm run build'
+alias prt='pnpm run test'
+
+# Docker related
+alias d='docker'
+alias dc='docker-compose'
+alias dcu='docker-compose up'
+alias dcd='docker-compose down'
+alias dcb='docker-compose build'
+
+# Directory navigation
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias .....='cd ../../../..'
+alias ~='cd ~'
+alias -- -='cd -'
+
+# List directory contents
+alias ls='ls -G'
+alias ll='ls -lh'
+alias la='ls -lah'
+alias l='ls -CF' 
