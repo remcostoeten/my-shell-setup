@@ -1,4 +1,4 @@
-#!/usr/bin/env zsh
+#!/bin/bash
 
 # --- Color Definitions ---
 RED='\033[0;31m'
@@ -25,17 +25,13 @@ check_requirements() {
   fi
 
   # Check for docker-compose (or docker compose)
-  # Check for 'docker compose' first (newer syntax)
   if ! docker compose version >/dev/null 2>&1; then
-    # If not found, check for 'docker-compose' (older syntax)
     if ! command -v docker-compose >/dev/null 2>&1; then
       missing_tools+=("docker-compose (or docker compose v2+)")
     else
-      # Older docker-compose found, use it
       DOCKER_COMPOSE_CMD="docker-compose"
     fi
   else
-    # Newer 'docker compose' found, use it
     DOCKER_COMPOSE_CMD="docker compose"
   fi
 
@@ -51,12 +47,12 @@ check_requirements() {
       echo "  - ${tool}"
     done
     echo "${YELLOW}Please install these tools before running this script.${NC}"
-    exit 1
+    return 1
   fi
 
-  # Set default compose command if not set by checks (shouldn't happen if checks pass)
+  # Set default compose command if not set by checks
   DOCKER_COMPOSE_CMD=${DOCKER_COMPOSE_CMD:-"docker compose"}
-  # echo "Using Docker Compose command: $DOCKER_COMPOSE_CMD" # Optional debug line
+  return 0
 }
 
 # --- Function to copy to clipboard cross-platform ---
@@ -1229,42 +1225,52 @@ EOL
 }
 
 
-# --- Main Loop ---
-check_requirements # Run checks at the beginning
+# --- Main Function ---
+dockertool() {
+  # First check requirements
+  if ! check_requirements; then
+    return 1
+  fi
 
-while true
-do
-  display_main_menu
-  read choice
+  while true; do
+    display_main_menu
+    read choice
 
-  case $choice in
-    1)
-      list_all_assets
-      ;;
-    2)
-      stop_operations_menu
-      ;;
-    3)
-      remove_operations_menu
-      ;;
-    4)
-      export_copy_operations_menu
-      ;;
-    5)
-      create_environment_menu
-      ;;
-    6)
-      start_environment_menu
-      ;;
-    7)
-      echo "${BLUE}Exiting Docker Management Tool.${NC}"
-      exit 0
-      ;;
-    *)
-      echo "${RED}Invalid choice. Please enter a number between 1 and 7.${NC}"
-      sleep 1 # Pause briefly
-      ;;
-  esac
+    case $choice in
+      1)
+        list_all_assets
+        ;;
+      2)
+        stop_operations_menu
+        ;;
+      3)
+        remove_operations_menu
+        ;;
+      4)
+        export_copy_operations_menu
+        ;;
+      5)
+        create_environment_menu
+        ;;
+      6)
+        start_environment_menu
+        ;;
+      7)
+        echo "${BLUE}Exiting Docker Management Tool.${NC}"
+        return 0
+        ;;
+      *)
+        echo "${RED}Invalid choice. Please enter a number between 1 and 7.${NC}"
+        sleep 1
+        ;;
+    esac
+  done
+}
 
-  # No explicit pause here, functions handle their own "Press Enter" prompts
-done
+# Only run if executed directly, not sourced
+if [[ "${BASH_SOURCE[0]-}" == "${0}" ]]; then
+  dockertool
+else
+  # When sourced, just define the function and show a message
+  echo "${GREEN}Docker tool loaded. Type 'dockertool' to start.${NC}"
+fi

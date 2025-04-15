@@ -284,7 +284,6 @@ setup_aliases() {
   alias be="be"
   alias bb="bb"
   alias bi="bi"
-
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

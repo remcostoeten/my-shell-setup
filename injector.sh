@@ -9,21 +9,10 @@ export DOTFILES_PATH="${DOTFILES_PATH:-$HOME/.config/dotfiles}"
 #     echo "Warning: Core injector not found: $core_injector_path" >&2
 # fi
 
-# Paths relative to $DOTFILES_PATH
-INJECTOR_PATHS_RELATIVE=(
-    "injectors/alias-injector"
-    "injectors/function-injector"
-    "injectors/packages-injector"
-    # Add other injector paths here
-)
+#!/bin/bash
 
-for injector_rel_path in "${INJECTOR_PATHS_RELATIVE[@]}"; do
-    injector_full_path="$DOTFILES_PATH/$injector_rel_path"
-    if [ -f "$injector_full_path" ]; then
-        . "$injector_full_path"
-    else
-        echo "Warning: Injector file not found: $injector_full_path" >&2
+for file in "$DOTFILES_PATH/injectors/"*; do
+    if [ -f "$file" ]; then
+        source "$file"
     fi
-done
-
-unset core_injector_path INJECTOR_PATHS_RELATIVE injector_rel_path injector_full_path
+done 
