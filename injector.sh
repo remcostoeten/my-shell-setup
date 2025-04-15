@@ -2,18 +2,18 @@
 
 export DOTFILES_PATH="${DOTFILES_PATH:-$HOME/.config/dotfiles}"
 
-core_injector_path="$DOTFILES_PATH/core/envs-injector.sh"
-if [ -f "$core_injector_path" ]; then
-    . "$core_injector_path"
-else
-    echo "Warning: Core injector not found: $core_injector_path" >&2
-fi
+# core_injector_path="$DOTFILES_PATH/core/envs-injector.sh"
+# if [ -f "$core_injector_path" ]; then
+#     . "$core_injector_path"
+# else
+#     echo "Warning: Core injector not found: $core_injector_path" >&2
+# fi
 
 # Paths relative to $DOTFILES_PATH
 INJECTOR_PATHS_RELATIVE=(
-    "injectors/alias-injector.sh"
-    "injectors/function-injector.sh"
-    "injectors/packages-injector.sh"
+    "injectors/alias-injector"
+    "injectors/function-injector"
+    "injectors/packages-injector"
     # Add other injector paths here
 )
 
