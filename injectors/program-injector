@@ -1,0 +1,9 @@
+#!/bin/bash
+
+for file in "$DOTFILES_PATH/programs/"*; do
+    if [ -f "$file" ]; then
+        source "$file"
+    fi
+done 
+# source "$DOTFILES_PATH/programs/dockertool"
+# source "$DOTFILES_PATH/programs/find-unused-packages"

@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [ -d "$DOTFILES_PATH/functions" ]; then
+  for func_file in "$DOTFILES_PATH"/functions/*; do
+    if [ -f "$func_file" ]; then
+      source "$func_file"
+    fi
+  done
+  unset func_file # Clean up loop variable
+fi

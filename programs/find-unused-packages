@@ -1,0 +1,316 @@
+#!/bin/bash
+
+# Colors for better readability
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'  # No Color
+
+# Array of common false positives that should be ignored
+IGNORED_PACKAGES=(
+  # Build tools and bundlers
+  "webpack" "rollup" "parcel" "esbuild" "vite" "turbopack"
+  # Transpilers and compilers
+  "typescript" "babel" "swc" "tsc"
+  # CSS processors
+  "sass" "less" "postcss" "tailwindcss" "autoprefixer"
+  # Testing packages
+  "jest" "mocha" "chai" "cypress" "playwright" "vitest"
+  # Linters and formatters
+  "eslint" "prettier" "stylelint" "tslint"
+  # Types packages
+  "@types/"
+  # Common dev utilities
+  "husky" "lint-staged" "nodemon" "concurrently"
+  # Common runtime packages
+  "express" "next" "react" "react-dom" "vue" "nuxt"
+)
+
+# File to track changes for potential reversion
+CHANGES_FILE="package_cleanup_changes.json"
+
+# Function to check if a package is in the ignored list
+is_ignored() {
+  local package_name="$1"
+
+  for ignored in "${IGNORED_PACKAGES[@]}"; do
+    if [[ "$package_name" == "$ignored"* ]]; then
+      return 0  # True, should be ignored
+    fi
+  done
+
+  return 1  # False, not in ignore list
+}
+
+# Function to find unused dependencies
+check_deps() {
+  echo -e "${BLUE}🔍 Scanning for unused packages...${NC}"
+
+  # Check if necessary tools are installed
+  if ! command -v npx &>/dev/null; then
+    echo -e "${RED}❌ Error: npx is not installed. Please install Node.js and npm.${NC}"
+    return 1  # Exit function, not the script
+  fi
+
+  if ! command -v jq &>/dev/null; then
+    echo -e "${RED}❌ Error: jq is not installed. Please install jq for JSON processing.${NC}"
+    return 1  # Exit function, not the script
+  fi
+
+  # Create a backup of package.json
+  echo -e "${BLUE}📑 Creating backup of package.json...${NC}"
+  cp package.json package.json.backup
+
+  # Run dependency-cruiser or depcheck to find unused dependencies
+  local unused_deps=()
+
+  if command -v npx depcheck &>/dev/null; then
+    echo -e "${BLUE}🧰 Using depcheck to find unused dependencies...${NC}"
+    unused_output=$(npx depcheck --json)
+    mapfile -t unused_deps < <(echo "$unused_output" | jq -r '.dependencies[]')
+  else
+    echo -e "${YELLOW}⚠️ depcheck not found, installing temporarily...${NC}"
+
+    # Check for root before global installation
+    if [[ "$EUID" -eq 0 ]]; then
+      echo -e "${BLUE}📦 Installing depcheck globally...${NC}"
+      npm install -g depcheck
+    else
+      echo -e "${YELLOW}⚠️ depcheck not found, installing locally...${NC}"
+      npm install -D depcheck
+    fi
+
+    unused_output=$(npx depcheck --json)
+    mapfile -t unused_deps < <(echo "$unused_output" | jq -r '.dependencies[]')
+  fi
+
+  # Initialize changes file as empty JSON object
+  echo '{"removed": {}, "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"}}' > "$CHANGES_FILE"
+
+  # Get the original package versions before removal
+  for pkg in "${unused_deps[@]}"; do
+    # Skip ignored packages
+    if is_ignored "$pkg"; then
+      echo -e "${YELLOW}⚠️ Ignoring package in false positive list: ${pkg}${NC}"
+      continue
+    fi
+
+    # Get the version of the package
+    version=$(jq -r ".dependencies[\"$pkg\"] // .devDependencies[\"$pkg\"]" package.json)
+
+    if [[ "$version" != "null" ]]; then
+      # Record the package and its version in the changes file
+      if ! jq --arg pkg "$pkg" --arg ver "$version" '.removed[$pkg] = $ver' "$CHANGES_FILE" > temp.json; then
+        echo -e "${RED}❌ Error updating changes file.${NC}"
+        return 1
+      fi
+      mv temp.json "$CHANGES_FILE"
+
+      echo -e "${GREEN}✅ Identified unused package: ${pkg} (${version})${NC}"
+    fi
+  done
+
+  # Count how many packages will be removed
+  removal_count=$(jq -r '.removed | length' "$CHANGES_FILE")
+
+  if [[ $removal_count -eq 0 ]]; then
+    echo -e "${GREEN}✨ No unused packages detected!${NC}"
+    rm -f "$CHANGES_FILE"
+    rm -f package.json.backup
+    return 0
+  else
+    echo -e "${BLUE}📊 Found ${removal_count} unused packages to remove.${NC}"
+
+    # Display the packages to be removed
+    echo -e "${BLUE}Packages to be removed:${NC}"
+    jq -r '.removed | to_entries | .[] | "\(.key)@\(.value)"' "$CHANGES_FILE"
+
+    # Proceed with removal or ask for confirmation
+    read -p "Do you want to remove these packages? (y/n): " confirm
+
+    if [[ "$confirm" =~ ^[Yy]$ ]]; then
+      remove_packages
+    else
+      echo -e "${YELLOW}⚠️ Operation cancelled. No packages were removed.${NC}"
+      rm -f "$CHANGES_FILE"
+      rm -f package.json.backup
+      return 0
+    fi
+  fi
+}
+
+# Function to remove identified unused packages
+remove_packages() {
+  echo -e "${BLUE}🗑️ Removing unused packages...${NC}"
+
+  # Get the list of packages to remove
+  packages_to_remove=$(jq -r '.removed | keys[]' "$CHANGES_FILE")
+
+  if [[ -z "$packages_to_remove" ]]; then
+    echo -e "${YELLOW}⚠️ No packages to remove.${NC}"
+    return
+  fi
+
+  # Convert to array
+  mapfile -t remove_array <<<"$packages_to_remove"
+
+  # Use npm/yarn/pnpm to remove the packages
+  if command -v pnpm &>/dev/null; then
+    echo -e "${BLUE}🧶 Using pnpm to remove packages...${NC}"
+    if ! pnpm remove "${remove_array[@]}"; then
+      echo -e "${RED}❌ pnpm remove failed!${NC}"
+      return 1
+    fi
+  elif command -v yarn &>/dev/null; then
+    echo -e "${BLUE}🧶 Using yarn to remove packages...${NC}"
+    if ! yarn remove "${remove_array[@]}"; then
+      echo -e "${RED}❌ yarn remove failed!${NC}"
+      return 1
+    fi
+  else
+    echo -e "${BLUE}📦 Using npm to remove packages...${NC}"
+    if ! npm uninstall "${remove_array[@]}"; then
+      echo -e "${RED}❌ npm uninstall failed!${NC}"
+      return 1
+    fi
+  fi
+
+  echo -e "${GREEN}✅ Packages successfully removed!${NC}"
+  echo -e "${BLUE}📝 Changes recorded in ${CHANGES_FILE} for possible reversion.${NC}"
+  echo -e "${YELLOW}ℹ️ To revert all changes run: $0 --revert-all${NC}"
+  echo -e "${YELLOW}ℹ️ To revert specific packages run: $0 --revert package1 package2${NC}"
+}
+
+# Function to revert all removed packages
+revert_all() {
+  echo -e "${BLUE}↩️ Reverting all removed packages...${NC}"
+
+  if [[ ! -f "$CHANGES_FILE" ]]; then
+    echo -e "${RED}❌ No changes file found. Nothing to revert.${NC}"
+    return 1
+  fi
+
+  # Get all packages and their versions from the changes file
+  local packages=()
+  while IFS="=" read -r pkg version; do
+    packages+=("$pkg@$version")
+  done < <(jq -r '.removed | to_entries[] | "\(.key)=\(.value)"' "$CHANGES_FILE")
+
+  if [[ ${#packages[@]} -eq 0 ]]; then
+    echo -e "${YELLOW}⚠️ No packages to revert.${NC}"
+    return 0
+  fi
+
+  # Reinstall packages
+  if command -v pnpm &>/dev/null; then
+    echo -e "${BLUE}🧶 Using pnpm to reinstall packages...${NC}"
+    if ! pnpm add "${packages[@]}"; then
+      echo -e "${RED}❌ pnpm add failed!${NC}"
+      return 1
+    fi
+  elif command -v yarn &>/dev/null; then
+    echo -e "${BLUE}🧶 Using yarn to reinstall packages...${NC}"
+    if ! yarn add "${packages[@]}"; then
+      echo -e "${RED}❌ yarn add failed!${NC}"
+      return 1
+    fi
+  else
+    echo -e "${BLUE}📦 Using npm to reinstall packages...${NC}"
+    if ! npm install "${packages[@]}"; then
+      echo -e "${RED}❌ npm install failed!${NC}"
+      return 1
+    fi
+  fi
+
+  echo -e "${GREEN}✅ All packages successfully reinstalled!${NC}"
+  rm -f "$CHANGES_FILE"
+}
+
+# Function to revert specific packages
+revert_specific() {
+  echo -e "${BLUE}↩️ Reverting specified packages...${NC}"
+
+  if [[ ! -f "$CHANGES_FILE" ]]; then
+    echo -e "${RED}❌ No changes file found. Nothing to revert.${NC}"
+    return 1
+  fi
+
+  # Skip the first argument which is "--revert"
+  shift
+  local packages_to_revert=("$@")
+
+  if [[ ${#packages_to_revert[@]} -eq 0 ]]; then
+    echo -e "${YELLOW}⚠️ No packages specified to revert.${NC}"
+    return 1
+  fi
+
+  # Build the installation commands
+  local packages_to_install=()
+
+  for pkg in "${packages_to_revert[@]}"; do
+    version=$(jq -r ".removed[\"$pkg\"]" "$CHANGES_FILE")
+
+    if [[ "$version" != "null" ]]; then
+      packages_to_install+=("$pkg@$version")
+
+      # Remove this package from the changes file
+      if ! jq --arg pkg "$pkg" 'del(.removed[$pkg])' "$CHANGES_FILE" > temp.json; then
+        echo -e "${RED}❌ Error updating changes file.${NC}"
+        return 1
+      fi
+      mv temp.json "$CHANGES_FILE"
+    else
+      echo -e "${YELLOW}⚠️ Package '${pkg}' not found in changes file.${NC}"
+    fi
+  done
+
+  if [[ ${#packages_to_install[@]} -gt 0 ]]; then
+    # Reinstall packages
+    if command -v pnpm &>/dev/null; then
+      echo -e "${BLUE}🧶 Using pnpm to reinstall packages...${NC}"
+      if ! pnpm add "${packages_to_install[@]}"; then
+        echo -e "${RED}❌ pnpm add failed!${NC}"
+        return 1
+      fi
+    elif command -v yarn &>/dev/null; then
+      echo -e "${BLUE}🧶 Using yarn to reinstall packages...${NC}"
+      if ! yarn add "${packages_to_install[@]}"; then
+        echo -e "${RED}❌ yarn add failed!${NC}"
+        return 1
+      fi
+    else
+      echo -e "${BLUE}📦 Using npm to reinstall packages...${NC}"
+      if ! npm install "${packages_to_install[@]}"; then
+        echo -e "${RED}❌ npm install failed!${NC}"
+        return 1
+      fi
+    fi
+
+    echo -e "${GREEN}✅ Specified packages successfully reinstalled!${NC}"
+
+    # If all packages have been reinstalled, remove the changes file
+    if [[ $(jq -r '.removed | length' "$CHANGES_FILE") -eq 0 ]]; then
+      rm -f "$CHANGES_FILE"
+      echo -e "${GREEN}✅ All packages have been reverted.${NC}"
+    fi
+  else
+    echo -e "${YELLOW}⚠️ No valid packages to reinstall.${NC}"
+  fi
+}
+
+# Function to show help information
+show_help() {
+  echo -e "${BLUE}📚 Package Cleanup Utility${NC}"
+  echo "Usage:"
+  echo "  check_dependencies                   - Scan for unused packages and remove them"
+  echo "  check_dependencies --revert-all      - Reinstall all previously removed packages"
+  echo "  check_dependencies --revert pkg1 pkg2 - Reinstall specific packages"
+  echo "  check_dependencies --help            - Show this help message"
+  echo
+  echo "The script will create a backup of package.json and track all changes"
+  echo "in $CHANGES_FILE for possible reversion."
+  echo
+  echo -e "${YELLOW}Note: Some commonly false-positive packages are automatically ignored.${NC}"
+  echo "You can edit the IGNORED_PACKAGES array in this script to customize this list."
+}
