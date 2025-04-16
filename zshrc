@@ -1,3 +1,5 @@
 ## The main zshrc file symlink
 
-source  ~/.config/dotfiles/injector.sh
+# Source dotfiles configuration
+export DOTFILES_PATH="$HOME/.config/dotfiles"
+source "$DOTFILES_PATH/main_injector.sh"
