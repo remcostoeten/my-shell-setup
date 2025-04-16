@@ -1,34 +1,34 @@
-#!/bin/bash
+#!/bin/zsh
 
-# File: main_injector.sh
-# Created: $(date +%Y-%m-%d)
-# Description: Main injector that sources all dotfiles configurations
+# Main injector script
+# Sources all individual injectors
 
-# Set the dotfiles path if not already set
-export DOTFILES_PATH="${DOTFILES_PATH:-$HOME/.config/dotfiles}"
-echo "Initializing dotfiles from: $DOTFILES_PATH"
+SCRIPT_DIR="${0:A:h}"
 
-# Source colors first (used by other scripts)
-if [ -f "$DOTFILES_PATH/initialize/colors.sh" ]; then
-    echo "Loading colors..."
-    source "$DOTFILES_PATH/initialize/colors.sh"
+# Load configuration
+source "$SCRIPT_DIR/initialize/config.sh"
+
+# Helper function for logging
+log() {
+    if [[ "$SHELL_VERBOSE" == "true" ]]; then
+        echo "$@"
+    fi
+}
+
+# Welcome message (if enabled)
+if [[ "$SHELL_SHOW_WELCOME" == "true" ]]; then
+    log "Initializing dotfiles from: $SCRIPT_DIR"
 fi
 
-# Source all injectors
-if [ -d "$DOTFILES_PATH/injectors" ]; then
-    echo "Loading injectors..."
-    for injector in "$DOTFILES_PATH/injectors"/*-injector; do
-        if [ -f "$injector" ]; then
-            echo "Sourcing injector: $injector"
-            source "$injector"
-        fi
-    done
-    unset injector
-else
-    echo "Warning: injectors directory not found at $DOTFILES_PATH/injectors"
-fi
+# Source all injectors in order
+for injector in "$SCRIPT_DIR/injectors"/*-injector; do
+    if [ -f "$injector" ]; then
+        log "Loading injector: $(basename "$injector")"
+        source "$injector" 2>/dev/null
+    fi
+done
 
-# Print welcome message if exists
-if [ -f "$DOTFILES_PATH/initialize/welcome.sh" ]; then
-    source "$DOTFILES_PATH/initialize/welcome.sh"
+# Clear any error messages from the screen if not in verbose mode
+if [[ "$SHELL_VERBOSE" != "true" ]]; then
+    clear
 fi 

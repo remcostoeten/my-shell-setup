@@ -1,0 +1,25 @@
+#!/bin/zsh
+
+# Shell enhancements injector
+# Sources all files in the shell-enhancements directory in numerical order
+
+SCRIPT_DIR="${0:A:h}"
+SHELL_ENHANCEMENTS_DIR="$SCRIPT_DIR/../shell-enhancements"
+VERBOSE=${SHELL_VERBOSE:-false}  # Can be enabled by setting SHELL_VERBOSE=true
+
+# Helper function for logging
+log() {
+    if [[ "$VERBOSE" == "true" ]]; then
+        echo "$@"
+    fi
+}
+
+# Source all files in the shell-enhancements directory in numerical order
+if [ -d "$SHELL_ENHANCEMENTS_DIR" ]; then
+    for file in $(ls -v "$SHELL_ENHANCEMENTS_DIR"/*.sh 2>/dev/null); do
+        if [ -f "$file" ]; then
+            log "Loading shell enhancement: $(basename "$file")"
+            source "$file" 2>/dev/null
+        fi
+    done
+fi 

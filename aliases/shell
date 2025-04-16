@@ -11,7 +11,10 @@ alias cp='cp -r'
 alias mv='mv -r'
 alias mkdir='mkdir -p'
 alias cd='cd -P'
+
+
 alias .='open .'
+
 alias ..='cd ..'
 alias ...='cd ../..'
 alias ....='cd ../..'

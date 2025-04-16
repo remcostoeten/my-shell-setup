@@ -1,0 +1,94 @@
+# Shell enhancements configuration
+# Created: $(date '+%Y-%m-%d')
+
+# Load zsh-autosuggestions
+source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+
+# Load zsh-syntax-highlighting (must be loaded after other widgets)
+source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+
+# Initialize zoxide with 'z' command (keeping normal cd behavior)
+eval "$(zoxide init zsh)"
+
+# Basic directory navigation aliases
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+alias .....='cd ../../../..'
+alias ~='cd ~'
+alias -- -='cd -'
+
+# Initialize fzf
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+# Set up fzf key bindings and completion
+if type rg &> /dev/null; then
+  export FZF_DEFAULT_COMMAND='rg --files --hidden --follow --glob "!.git/*"'
+  export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+fi
+
+# Configure fzf appearance
+export FZF_DEFAULT_OPTS='--height 40% --layout=reverse --border --preview "bat --style=numbers --color=always --line-range :500 {}"'
+
+# Initialize thefuck
+eval $(thefuck --alias)
+
+# Custom key bindings for better navigation
+bindkey '^[[A' history-substring-search-up
+bindkey '^[[B' history-substring-search-down
+bindkey '^[[1;5C' forward-word
+bindkey '^[[1;5D' backward-word
+
+# Bat (better cat) aliases
+alias cat='bat --paging=never'
+alias less='bat --paging=always'
+
+# FZF enhanced functions
+# Fuzzy find files
+ff() {
+  local file
+  file=$(fzf --preview 'bat --style=numbers --color=always {}' --preview-window '~3')
+  if [ -n "$file" ]; then
+    ${EDITOR:-vim} "$file"
+  fi
+}
+
+# Fuzzy find in history
+fh() {
+  print -z $( ([ -n "$ZSH_NAME" ] && fc -l 1 || history) | fzf +s --tac | sed -E 's/ *[0-9]*\*? *//' | sed -E 's/\\/\\\\/g')
+}
+
+# Fuzzy find and cd into directory
+fd() {
+  local dir
+  dir=$(find ${1:-.} -path '*/\.*' -prune -o -type d -print 2> /dev/null | fzf +m) &&
+  cd "$dir"
+}
+
+# Git fuzzy functions
+# Fuzzy git checkout branch
+fbr() {
+  local branches branch
+  branches=$(git branch --all | grep -v HEAD) &&
+  branch=$(echo "$branches" |
+           fzf-tmux -d $(( 2 + $(wc -l <<< "$branches") )) +m) &&
+  git checkout $(echo "$branch" | sed "s/.* //" | sed "s#remotes/[^/]*/##")
+}
+
+# Fuzzy git add
+fga() {
+  local files
+  files=$(git status -s | awk '{print $2}' | fzf -m --preview 'git diff --color=always {}')
+  if [ -n "$files" ]; then
+    git add $files
+  fi
+}
+
+# Auto-completion settings
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' # Case insensitive tab completion
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"   # Colored completion (different colors for dirs/files/etc)
+zstyle ':completion:*' rehash true                        # automatically find new executables in path
+zstyle ':completion:*' accept-exact '*(N)'
+zstyle ':completion:*' use-cache on
+zstyle ':completion:*' cache-path ~/.zsh/cache 
