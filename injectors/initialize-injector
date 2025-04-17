@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# File: initialize-injector
+# Created: $(date +%Y-%m-%d)
+# Description: Sources all files in the initialize directory
+
+if [ -d "$DOTFILES_PATH/initialize" ]; then
+    for file in "$DOTFILES_PATH/initialize"/*; do
+        if [ -f "$file" ]; then
+            source "$file"
+        fi
+    done
+    unset file
+fi 

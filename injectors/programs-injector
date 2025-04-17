@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# File: programs-injector
+# Created: $(date +%Y-%m-%d)
+# Description: Sources all files in the programs directory
+
+if [ -d "$DOTFILES_PATH/programs" ]; then
+    for file in "$DOTFILES_PATH/programs"/*; do
+        if [ -f "$file" ] && [ "$(basename "$file")" != "dotfiles-architect.sh" ]; then
+            source "$file"
+        fi
+    done
+    unset file
+fi 

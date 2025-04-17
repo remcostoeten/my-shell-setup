@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# File: scripts-injector
+# Created: $(date +%Y-%m-%d)
+# Description: Sources all files in the scripts directory
+
+if [ -d "$DOTFILES_PATH/scripts" ]; then
+    for file in "$DOTFILES_PATH/scripts"/*; do
+        if [ -f "$file" ]; then
+            source "$file"
+        fi
+    done
+    unset file
+fi 

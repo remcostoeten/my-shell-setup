@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# File: aliases-injector
+# Created: $(date +%Y-%m-%d)
+# Description: Sources all files in the aliases directory
+
+# Debug output
+echo "Loading aliases from $DOTFILES_PATH/aliases"
+
+if [ -d "$DOTFILES_PATH/aliases" ]; then
+    for alias_file in "$DOTFILES_PATH/aliases"/*; do
+        if [ -f "$alias_file" ]; then
+            echo "Sourcing alias file: $alias_file"
+            source "$alias_file"
+        fi
+    done
+    unset alias_file
+else
+    echo "Warning: aliases directory not found at $DOTFILES_PATH/aliases"
+fi 
