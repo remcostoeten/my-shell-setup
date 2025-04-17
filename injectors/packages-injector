@@ -1,7 +1,54 @@
 #!/bin/bash
 
-for file in "$DOTFILES_PATH/packages/"*; do
-    if [ -f "$file" ]; then
-        source "$file"
-    fi
-done 
+# Source all files in the packages directory if it exists
+if [ -d "$DOTFILES_PATH/packages" ]; then
+    for package_file in "$DOTFILES_PATH/packages"/*; do
+        if [ -f "$package_file" ]; then
+            source "$package_file"
+        fi
+    done
+fi
+
+# Function to manage packages
+function package_manager() {
+    echo -e "${GREEN}Package Manager${NC}"
+    echo -e "1. List all package configurations"
+    echo -e "2. Create new package configuration"
+    echo -e "3. Help"
+    echo -e "4. Exit"
+    
+    read -p "Enter choice (1-4): " choice
+    case $choice in
+        1)
+            echo -e "${BLUE}Available package configurations:${NC}"
+            ls -1 "$DOTFILES_PATH/packages/" 2>/dev/null || echo "No package configurations found"
+            ;;
+        2)
+            read -p "Enter new package configuration name: " name
+            if [ ! -z "$name" ]; then
+                mkdir -p "$DOTFILES_PATH/packages"
+                cat > "$DOTFILES_PATH/packages/$name" << EOF
+#!/bin/bash
+# Package configuration: $name
+# Created: $(date +"%Y-%m-%d")
+
+# Add your package configuration here
+EOF
+                echo -e "${GREEN}Created new package configuration: $name${NC}"
+            fi
+            ;;
+        3)
+            echo -e "${BLUE}Package Manager Help:${NC}"
+            echo "This tool helps manage package configurations."
+            echo "Place your package configurations in $DOTFILES_PATH/packages/"
+            ;;
+        4)
+            return 0
+            ;;
+        *)
+            echo -e "${RED}Invalid choice${NC}"
+            ;;
+    esac
+}
+
+alias manage-packages="package_manager" 

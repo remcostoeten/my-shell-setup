@@ -1,5 +1,7 @@
-# Enhanced ls aliases using eza
-# Created: $(date '+%Y-%m-%d')
+#!/bin/bash
+# File: ls.sh
+# Created: $(date +"%Y-%m-%d")
+# Description: Enhanced ls aliases using eza
 
 # Basic exa aliases
 alias ls='eza --group-directories-first'

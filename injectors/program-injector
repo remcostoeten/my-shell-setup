@@ -1,9 +1,54 @@
 #!/bin/bash
 
-for file in "$DOTFILES_PATH/programs/"*; do
-    if [ -f "$file" ]; then
-        source "$file"
-    fi
-done 
-# source "$DOTFILES_PATH/programs/dockertool"
-# source "$DOTFILES_PATH/programs/find-unused-packages"
+# Source all files in the programs directory if it exists
+if [ -d "$DOTFILES_PATH/programs" ]; then
+    for program_file in "$DOTFILES_PATH/programs"/*; do
+        if [ -f "$program_file" ]; then
+            source "$program_file"
+        fi
+    done
+fi
+
+# Function to manage programs
+function program_manager() {
+    echo -e "${GREEN}Program Manager${NC}"
+    echo -e "1. List all program configurations"
+    echo -e "2. Create new program configuration"
+    echo -e "3. Help"
+    echo -e "4. Exit"
+    
+    read -p "Enter choice (1-4): " choice
+    case $choice in
+        1)
+            echo -e "${BLUE}Available program configurations:${NC}"
+            ls -1 "$DOTFILES_PATH/programs/" 2>/dev/null || echo "No program configurations found"
+            ;;
+        2)
+            read -p "Enter new program configuration name: " name
+            if [ ! -z "$name" ]; then
+                mkdir -p "$DOTFILES_PATH/programs"
+                cat > "$DOTFILES_PATH/programs/$name" << EOF
+#!/bin/bash
+# Program configuration: $name
+# Created: $(date +"%Y-%m-%d")
+
+# Add your program configuration here
+EOF
+                echo -e "${GREEN}Created new program configuration: $name${NC}"
+            fi
+            ;;
+        3)
+            echo -e "${BLUE}Program Manager Help:${NC}"
+            echo "This tool helps manage program configurations."
+            echo "Place your program configurations in $DOTFILES_PATH/programs/"
+            ;;
+        4)
+            return 0
+            ;;
+        *)
+            echo -e "${RED}Invalid choice${NC}"
+            ;;
+    esac
+}
+
+alias manage-programs="program_manager"

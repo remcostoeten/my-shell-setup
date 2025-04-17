@@ -12,12 +12,15 @@ if [ -f "$DOTFILES_PATH/initialize/version.txt" ]; then
     export DOTFILES_LAST_UPDATED="$LAST_UPDATED"
 fi
 
-# Source all initialize files except version.txt
+# Source all files in the initialize directory
 if [ -d "$DOTFILES_PATH/initialize" ]; then
-    for file in "$DOTFILES_PATH/initialize"/*; do
-        if [ -f "$file" ] && [ "$(basename "$file")" != "version.txt" ]; then
-            source_file "$file"
+    log "info" "Loading initialization files from $DOTFILES_PATH/initialize"
+    for init_file in "$DOTFILES_PATH/initialize"/*; do
+        if [ -f "$init_file" ]; then
+            log "info" "Sourcing initialization file: $(basename "$init_file")"
+            source "$init_file"
         fi
     done
-    unset file
+else
+    log "warn" "Initialize directory not found at $DOTFILES_PATH/initialize"
 fi 

@@ -1,20 +1,203 @@
 #!/bin/bash
 
-# File: aliases-injector
-# Created: $(date +%Y-%m-%d)
-# Description: Sources all files in the aliases directory
+# # File: aliases-injector
+# # Created: $(date +%Y-%m-%d)
+# # Description: Sources all files in the aliases directory
 
-# Debug output
-echo "Loading aliases from $DOTFILES_PATH/aliases"
+# # Debug output
+# echo "Loading aliases from $DOTFILES_PATH/aliases"
 
+# if [ -d "$DOTFILES_PATH/aliases" ]; then
+#     for alias_file in "$DOTFILES_PATH/aliases"/*; do
+#         if [ -f "$alias_file" ]; then
+#             echo "Sourcing alias file: $alias_file"
+#             source "$alias_file"
+#         fi
+#     done
+#     unset alias_file
+# else
+#     echo "Warning: aliases directory not found at $DOTFILES_PATH/aliases"
+# fi 
+
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+DOTFILES_PATH="$(dirname "$SCRIPT_DIR")"
+
+# Source colors first if available
+if [ -f "$DOTFILES_PATH/initialize/colors.sh" ]; then
+    source "$DOTFILES_PATH/initialize/colors.sh"
+fi
+
+# Function to display all aliases with descriptions
+function show_all_aliases() {
+    echo -e "${BLUE}=== All Available Aliases ===${NC}\n"
+    
+    # Loop through all files in aliases directory
+    for file in "$DOTFILES_PATH/aliases"/*; do
+        if [ -f "$file" ]; then
+            echo -e "${GREEN}$(basename "$file"):${NC}"
+            # Extract and display aliases from the file
+            grep "^alias" "$file" | while read -r line; do
+                # Extract the alias name and command
+                name=$(echo "$line" | cut -d'=' -f1 | sed 's/alias //')
+                cmd=$(echo "$line" | cut -d'=' -f2- | sed 's/^"//;s/"$//')
+                echo -e "${YELLOW}$name${NC} => ${WHITE}$cmd${NC}"
+            done
+            echo ""
+        fi
+    done
+}
+
+# Function to display helper menu
+function alias_helper() {
+    echo -e "${GREEN}Alias Helper Menu${NC}"
+    echo -e "-----------------"
+    echo -e "1. List all aliases"
+    echo -e "2. Create new alias file"
+    echo -e "3. Help"
+    echo -e "4. Exit"
+    echo -e "-----------------"
+}
+
+# Function to create new alias file
+function create_alias_file() {
+    echo -e "${YELLOW}Creating new alias file${NC}"
+    read -p "Enter the name of the new alias file (without .sh): " filename
+    if [ -z "$filename" ]; then
+        echo -e "${RED}Filename cannot be empty${NC}"
+        return 1
+    fi
+    
+    # Create the file with proper header and footer
+    cat > "$DOTFILES_PATH/aliases/${filename}.sh" << EOF
+#!/bin/bash
+# File: ${filename}.sh
+# Created: $(date +"%Y-%m-%d")
+# Last Updated: $(date +"%Y-%m-%d")
+# Description: Custom aliases for ${filename}
+
+# Add your aliases here
+
+# End of file
+EOF
+    
+    echo -e "${GREEN}Created new alias file: ${filename}.sh${NC}"
+    chmod +x "$DOTFILES_PATH/aliases/${filename}.sh"
+}
+
+# Main alias sourcing logic - source ALL files regardless of extension
 if [ -d "$DOTFILES_PATH/aliases" ]; then
+    log "info" "Loading aliases from $DOTFILES_PATH/aliases"
     for alias_file in "$DOTFILES_PATH/aliases"/*; do
         if [ -f "$alias_file" ]; then
-            echo "Sourcing alias file: $alias_file"
+            log "info" "Sourcing alias file: $(basename "$alias_file")"
             source "$alias_file"
         fi
     done
-    unset alias_file
 else
-    echo "Warning: aliases directory not found at $DOTFILES_PATH/aliases"
-fi 
+    log "warn" "Aliases directory not found at $DOTFILES_PATH/aliases"
+fi
+
+# Function to manage aliases
+function alias_manager() {
+    echo -e "${GREEN}Alias Manager${NC}"
+    echo -e "1. List all alias files"
+    echo -e "2. Create new alias file"
+    echo -e "3. Show all defined aliases"
+    echo -e "4. Help"
+    echo -e "5. Exit"
+    
+    read -p "Enter choice (1-5): " choice
+    case $choice in
+        1)
+            echo -e "${BLUE}Available alias files:${NC}"
+            ls -1 "$DOTFILES_PATH/aliases/" 2>/dev/null || echo "No alias files found"
+            ;;
+        2)
+            read -p "Enter new alias file name (without .sh): " name
+            if [ ! -z "$name" ]; then
+                mkdir -p "$DOTFILES_PATH/aliases"
+                cat > "$DOTFILES_PATH/aliases/${name}.sh" << EOF
+#!/bin/bash
+# File: ${name}.sh
+# Created: $(date +"%Y-%m-%d")
+# Description: Custom aliases for ${name}
+
+# Add your aliases here
+
+EOF
+                chmod +x "$DOTFILES_PATH/aliases/${name}.sh"
+                echo -e "${GREEN}Created new alias file: ${name}.sh${NC}"
+                echo -e "Edit it at: $DOTFILES_PATH/aliases/${name}.sh"
+            fi
+            ;;
+        3)
+            echo -e "${BLUE}All defined aliases:${NC}"
+            alias | grep -v "alias -p" | sort
+            ;;
+        4)
+            echo -e "${BLUE}Alias Manager Help:${NC}"
+            echo "This tool helps manage your shell aliases."
+            echo "Place your alias files in $DOTFILES_PATH/aliases/"
+            echo -e "\nAvailable commands:"
+            echo "manage-aliases : Open this interactive menu"
+            echo "reload-config : Reload all aliases and configurations"
+            ;;
+        5)
+            return 0
+            ;;
+        *)
+            echo -e "${RED}Invalid choice${NC}"
+            ;;
+    esac
+}
+
+# Create alias for the manager
+alias manage-aliases="alias_manager"
+
+# Create help aliases
+alias aliases-help="alias_manager"
+alias aliases--help="alias_manager"
+alias aliases-h="alias_manager"
+
+# Function to run the interactive menu
+function alias_manager() {
+    if [[ $- == *i* ]]; then
+        while true; do
+            alias_helper
+            read -p "Enter your choice (1-4): " choice
+            case $choice in
+                1)
+                    show_all_aliases
+                    ;;
+                2)
+                    create_alias_file
+                    ;;
+                3)
+                    echo -e "${BLUE}Help:${NC}"
+                    echo "This injector manages your shell aliases."
+                    echo "You can create new alias files and they will be automatically sourced."
+                    echo "Place your alias files in the aliases/ directory."
+                    echo -e "\nAvailable commands:"
+                    echo "alias help, alias --help, alias -h, alias -help : Show all aliases"
+                    echo "manage-aliases : Open interactive alias manager"
+                    ;;
+                4)
+                    break
+                    ;;
+                *)
+                    echo -e "${RED}Invalid choice${NC}"
+                    ;;
+            esac
+        done
+    fi
+}
+
+# Handle help flags for the alias command itself
+function alias() {
+    if [[ "$1" == "--help" ]] || [[ "$1" == "-h" ]] || [[ "$1" == "-help" ]] || [[ "$1" == "help" ]]; then
+        show_all_aliases
+    else
+        command alias "$@"
+    fi
+} 
