@@ -4,10 +4,19 @@
 # Created: $(date +%Y-%m-%d)
 # Description: Sources all files in the initialize directory
 
+# Load version information
+if [ -f "$DOTFILES_PATH/initialize/version.txt" ]; then
+    # Source version file in a subshell to avoid polluting the environment
+    eval "$(grep -E '^(VERSION|LAST_UPDATED)=' "$DOTFILES_PATH/initialize/version.txt")"
+    export DOTFILES_VERSION="$VERSION"
+    export DOTFILES_LAST_UPDATED="$LAST_UPDATED"
+fi
+
+# Source all initialize files except version.txt
 if [ -d "$DOTFILES_PATH/initialize" ]; then
     for file in "$DOTFILES_PATH/initialize"/*; do
-        if [ -f "$file" ]; then
-            source "$file"
+        if [ -f "$file" ] && [ "$(basename "$file")" != "version.txt" ]; then
+            source_file "$file"
         fi
     done
     unset file
