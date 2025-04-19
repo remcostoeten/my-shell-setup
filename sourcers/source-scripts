@@ -1,0 +1,12 @@
+#!/bin/zsh
+
+# File: programs-injector
+# Created: $(date +%Y-%m-%d)
+# Description: Sources all files in the programs directory
+
+# Quietly source all scripts
+if [[ -d "${DOTFILES_DIR}/02-scripts" ]]; then
+    for file in "${DOTFILES_DIR}/02-scripts"/*.zsh(N); do
+        [[ -f "$file" ]] && source "$file" 2>/dev/null
+    done
+fi 

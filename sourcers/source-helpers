@@ -1,0 +1,50 @@
+#!/bin/zsh
+
+# File: source-helpers
+# Created: 2025-04-19
+# Description: Quietly sources helper scripts without producing terminal output
+
+# Get the directory where this script is located
+SCRIPT_DIR="${0:a:h}"
+DOTFILES_DIR="${SCRIPT_DIR}/.."
+
+# Function to source a file quietly
+source_quietly() {
+    local file="$1"
+    # Temporarily redirect all output
+    {
+        # Check if file exists and is readable before sourcing
+        if [[ -r "$file" ]]; then
+            source "$file"
+            return 0
+        else
+            return 1
+        fi
+    } > /dev/null 2>&1
+}
+
+# Source helper scripts silently
+if source_quietly "${DOTFILES_DIR}/03-helper-tools/helper-menu-creator"; then
+    # Make functions available in both bash and zsh
+    if [[ -n "$ZSH_VERSION" ]]; then
+        # For zsh
+        autoload -Uz create_helper
+        alias create-helper='create_helper'
+    else
+        # For bash
+        export -f create_helper 2>/dev/null
+        alias create-helper='create_helper'
+    fi
+fi
+
+if source_quietly "${DOTFILES_DIR}/03-helper-tools/intro-creator"; then
+    if [[ -n "$ZSH_VERSION" ]]; then
+        # For zsh
+        autoload -Uz add_intro
+        alias add-intro='add_intro'
+    else
+        # For bash
+        export -f add_intro 2>/dev/null
+        alias add-intro='add_intro'
+    fi
+fi

@@ -1,0 +1,204 @@
+#!/bin/bash
+
+# Define colors
+BLUE='\033[0;34m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+add_intro() {
+    local target_file="$1"
+    
+    # Check if target file is provided
+    if [ -z "$target_file" ]; then
+        echo -e "${RED}❌ Error: No target file specified${NC}"
+        echo -e "${YELLOW}Usage: add-intro path/to/your-script${NC}"
+        return 1
+    fi
+    
+    # Check if target file exists
+    if [ ! -f "$target_file" ]; then
+        echo -e "${RED}❌ Error: File '$target_file' not found${NC}"
+        return 1
+    fi
+    
+    # Get the script name without path
+    local script_name=$(basename "$target_file")
+    
+    # Get current date in YYYY-MM-DD format
+    local creation_date=$(date +%Y-%m-%d)
+    
+    # Check if we're in a git repository
+    in_git_repo=false
+    if git rev-parse --is-inside-work-tree &>/dev/null; then
+        in_git_repo=true
+    fi
+    
+    # Prompt for description
+    echo -e "${BLUE}📝 Enter a description for ${YELLOW}${script_name}${BLUE}:${NC}"
+    read -r description
+    
+    # Prompt for author name (use git config if available)
+    local default_author=""
+    if $in_git_repo; then
+        default_author=$(git config user.name 2>/dev/null)
+    fi
+    
+    if [ -n "$default_author" ]; then
+        echo -e "${BLUE}👤 Author [${YELLOW}${default_author}${BLUE}]:${NC}"
+        read -r author
+        author=${author:-$default_author}
+    else
+        echo -e "${BLUE}👤 Author:${NC}"
+        read -r author
+    fi
+    
+    # Prompt for tags (optional)
+    echo -e "${BLUE}🏷️  Tags (comma separated, optional):${NC}"
+    read -r tags
+    
+    # Check if it's a shell script
+    is_shell=false
+    if [[ "$script_name" == *.sh ]] || head -n1 "$target_file" | grep -q "^#!.*sh"; then
+        is_shell=true
+    fi
+    
+    # Create header based on file type
+    local header=""
+    
+    if $is_shell; then
+        # Preserve shebang if it exists
+        local shebang=""
+        if head -n1 "$target_file" | grep -q "^#!"; then
+            shebang=$(head -n1 "$target_file")
+        else
+            shebang="#!/bin/bash"
+        fi
+        
+        header="$shebang
+
+#==============================================================================
+# Name         : ${script_name}
+# Description  : ${description}
+# Author       : ${author}
+# Created      : ${creation_date}"
+
+        if $in_git_repo; then
+            header="$header
+# Updated      : \$(date +%Y-%m-%d) # Auto-updated on git commit"
+        fi
+
+        if [ -n "$tags" ]; then
+            header="$header
+# Tags         : ${tags}"
+        fi
+
+        header="$header
+#==============================================================================
+
+"
+    else
+        # Generic header for non-shell scripts
+        header="/**
+ * @file         ${script_name}
+ * @description  ${description}
+ * @author       ${author}
+ * @created      ${creation_date}"
+        
+        if $in_git_repo; then
+            header="$header
+ * @updated      \$(date +%Y-%m-%d) <!-- Auto-updated on git commit -->"
+        fi
+        
+        if [ -n "$tags" ]; then
+            header="$header
+ * @tags         ${tags}"
+        fi
+        
+        header="$header
+ */
+
+"
+    fi
+    
+    # Backup the file
+    cp "$target_file" "${target_file}.backup.$(date +%Y%m%d%H%M%S)"
+    
+    # Get the file content excluding the shebang line if it exists
+    local content
+    if $is_shell && head -n1 "$target_file" | grep -q "^#!"; then
+        content=$(tail -n +2 "$target_file")
+    else
+        content=$(cat "$target_file")
+    fi
+    
+    # Add header to file
+    echo -e "$header$content" > "$target_file"
+    
+    # Set up git hook for auto-updating date if in git repo
+    if $in_git_repo; then
+        setup_git_hook "$target_file"
+    fi
+    
+    echo -e "${GREEN}✅ Documentation header added to ${target_file}${NC}"
+    echo -e "${GREEN}✅ File backed up to ${target_file}.backup.$(date +%Y%m%d%H%M%S)${NC}"
+    
+    if $in_git_repo; then
+        echo -e "${BLUE}ℹ️  Git pre-commit hook configured to auto-update the 'Updated' date${NC}"
+    fi
+}
+
+setup_git_hook() {
+    local target_file="$1"
+    local git_root=$(git rev-parse --show-toplevel)
+    local hooks_dir="${git_root}/.git/hooks"
+    local pre_commit="${hooks_dir}/pre-commit"
+    
+    # Ensure hooks directory exists
+    mkdir -p "$hooks_dir"
+    
+    # Create or update pre-commit hook
+    if [ ! -f "$pre_commit" ]; then
+        cat > "$pre_commit" << 'EOL'
+#!/bin/bash
+
+# Pre-commit hook to update documentation headers
+
+update_file_header() {
+    local file="$1"
+    local today=$(date +%Y-%m-%d)
+    
+    # Check if file is staged and modified
+    if git diff --cached --name-only | grep -q "^$file$"; then
+        if grep -q "# Updated" "$file"; then
+            # Shell style comment
+            sed -i "s|# Updated *: .*|# Updated      : $today # Auto-updated on git commit|" "$file"
+        elif grep -q "@updated" "$file"; then
+            # Generic comment style
+            sed -i "s|@updated *: .*|@updated      : $today <!-- Auto-updated on git commit -->|" "$file"
+        fi
+    fi
+}
+
+# Get all staged files
+staged_files=$(git diff --cached --name-only)
+
+# Update headers in staged files
+for file in $staged_files; do
+    if [ -f "$file" ]; then
+        update_file_header "$file"
+        # Stage the changes if any were made
+        git add "$file"
+    fi
+done
+EOL
+        chmod +x "$pre_commit"
+    fi
+}
+
+# Export the add_intro function so it can be used after sourcing
+export -f add_intro
+
+alias create-intro='add_intro'

@@ -1,0 +1,485 @@
+#!/bin/bash
+
+# Define colors (using printf for consistency)
+BLUE=$(printf '\033[0;34m')
+GREEN=$(printf '\033[0;32m')
+YELLOW=$(printf '\033[1;33m')
+RED=$(printf '\033[0;31m')
+CYAN=$(printf '\033[0;36m')
+PURPLE=$(printf '\033[0;35m')
+NC=$(printf '\033[0m') # No Color
+
+# --- Help Function for create-helper itself ---
+show_create_helper_help() {
+    printf "\n${BLUE}create-helper Script Help${NC}\n\n"
+    printf "${GREEN}Purpose:${NC}\n"
+    printf "  This script enhances a target Bash script file by adding a\n"
+    printf "  standardized helper function structure, including options for\n"
+    printf "  help, version, an interactive menu, and user-defined commands.\n"
+    printf "  It essentially replaces or creates a main function based on the\n"
+    printf "  target script's base name.\n\n"
+
+    printf "${GREEN}Usage:${NC}\n"
+    printf "  ${YELLOW}create-helper <target_script.sh>${NC}\n\n"
+
+    printf "${GREEN}Arguments:${NC}\n"
+    printf "  ${YELLOW}<target_script.sh>${NC}  (Required) The path to the Bash script file you want to enhance.\n\n"
+
+    printf "${GREEN}Options:${NC}\n"
+    printf "  ${YELLOW}help, --help, -h${NC}     Show this help message and exit.\n\n"
+
+    printf "${GREEN}Process:${NC}\n"
+    printf "  1. Checks if the target file exists.\n"
+    printf "  2. Extracts the base name of the script (e.g., 'my_script' from 'my_script.sh').\n"
+    printf "  3. Looks for an existing alias definition within the target file to use as the default command.\n"
+    printf "  4. Prompts for a description of the script.\n"
+    printf "  5. Prompts for additional comma-separated commands (e.g., 'start, stop').\n"
+    printf "  6. Creates a backup of the original file (e.g., '<target_script.sh>.backup.YYYYMMDDHHMMSS').\n"
+    printf "  7. Overwrites the target file with the new structure, including:\n"
+    printf "     - A main function named after the script's base name.\n"
+    printf "     - Handlers for 'help', 'version', 'menu', and any additional commands.\n"
+    printf "     - Placeholder functions (\`command_command\`) for the additional commands.\n"
+    printf "     - Functions for displaying help (\`show_help\`), version (\`show_version\`), and the menu (\`show_menu\`).\n"
+    printf "  8. Makes the target file executable (\`chmod +x\`).\n"
+    printf "  9. Displays the available commands for the enhanced script.\n\n"
+
+    printf "${GREEN}Important:${NC}\n"
+    printf "  After running \`create-helper\`, you ${YELLOW}MUST${NC} source the modified target script\n"
+    printf "  into your current shell session to make the new function available:\n"
+    printf "    ${CYAN}source <target_script.sh>${NC}  or  ${CYAN}. <target_script.sh>${NC}\n\n"
+}
+
+# --- Cleanup Function ---
+cleanup_old_backups() {
+    local target_dir=$(dirname "$1")
+    local base_name=$(basename "$1")
+    local current_time=$(date +%s)
+    local cutoff_time=$((current_time - 300)) # 5 minutes = 300 seconds
+
+    # Find and remove backup files older than 5 minutes
+    find "$target_dir" -maxdepth 1 -name "${base_name}.backup.*" -type f | while read -r backup_file; do
+        # Get file's modification time
+        local file_time=$(stat -f %m "$backup_file" 2>/dev/null || stat -c %Y "$backup_file" 2>/dev/null)
+        
+        # Check if file is older than cutoff time
+        if [ "$file_time" -lt "$cutoff_time" ]; then
+            rm "$backup_file" 2>/dev/null && \
+            printf "${YELLOW}🧹 Removed old backup: %s${NC}\n" "$(basename "$backup_file")"
+        fi
+    done
+}
+
+# --- create_helper Function ---
+# Generates a bash script with a helper menu structure based on user input.
+# Usage: create-helper <target_script.sh>
+create_helper() {
+  local target_file="$1"
+  local script_name
+  local current_content
+  local alias_cmd=""
+  local alias_name=""
+  local description
+  local input_commands
+  local COMMANDS=() # Initialize as empty array
+  local helper_template # Variable to build the script content
+  local backup_file
+  local num_commands
+
+  # --- Help Flag Check ---
+  # Check if the first argument is a help flag BEFORE processing the file
+  case "$1" in
+    help|--help|-h)
+      show_create_helper_help # Display help for this script
+      return 0 # Exit successfully after showing help
+      ;;
+  esac
+
+  # --- Argument and File Validation ---
+  # Check if target file is provided (after help check)
+  if [ -z "$target_file" ]; then
+    echo -e "${RED}❌ Error: No target file specified${NC}" >&2
+    echo -e "${YELLOW}Usage: create-helper path/to/your-script.sh${NC}" >&2
+    echo -e "${YELLOW}Run 'create-helper --help' for more information.${NC}" >&2
+    return 1
+  fi
+
+  # Check if target file exists
+  if [ ! -f "$target_file" ]; then
+    echo -e "${RED}❌ Error: File '$target_file' not found${NC}" >&2
+    return 1
+  fi
+
+  # --- Gather Information ---
+  # Get script name without extension
+  script_name=$(basename "$target_file" .sh)
+
+  # Read the current content of the file
+  current_content=$(cat "$target_file")
+
+  # Extract alias if it exists (Improved regex for quotes)
+  if [[ "$current_content" =~ alias[[:space:]]+([^=]+)=([\'\"])(.+)\2 ]]; then
+    alias_name="${BASH_REMATCH[1]}"
+    alias_cmd="${BASH_REMATCH[3]}" # Use group 3 for the command inside quotes
+    echo -e "${BLUE}📌 Found alias: ${YELLOW}$alias_name${BLUE} with command: ${YELLOW}$alias_cmd${NC}"
+  fi
+
+  # Prompt for script description
+  echo -e "${BLUE}📝 Enter a description for ${YELLOW}${script_name}${BLUE}:${NC}"
+  read -r description
+  description=${description:-"A shell script"} # Default description
+
+  # Prompt for available commands
+  echo -e "${BLUE}🔧 Enter additional commands (comma-separated, e.g., start,stop,restart):${NC}"
+  read -r input_commands
+
+  # Create array from commands, handling empty input and trimming whitespace
+  if [ -n "$input_commands" ]; then # Only process if input is not empty
+    local IFS=',' # Set Internal Field Separator to comma for read
+    local -a ADDR # Declare ADDR as an array
+    while read -ra ADDR; do
+      for i in "${ADDR[@]}"; do
+        # Trim leading/trailing whitespace
+        i="${i#"${i%%[![:space:]]*}"}"
+        i="${i%"${i##*[![:space:]]}"}"
+        # Add to array only if non-empty after trimming
+        if [ -n "$i" ]; then
+          COMMANDS+=("$i")
+        fi
+      done
+    done <<< "$input_commands" # Feed the input string to the while loop
+  fi
+  num_commands=${#COMMANDS[@]} # Get the number of commands found
+
+  # --- Build the Helper Template ---
+  # Using printf for safer variable expansion within the template
+  helper_template="#!/bin/bash
+
+# ========== HELPER FUNCTIONS ==========
+# Generated by create-helper script
+
+# Define colors for helper output (using printf for safety)
+HELPER_BLUE=\$(printf '\\033[0;34m')
+HELPER_GREEN=\$(printf '\\033[0;32m')
+HELPER_YELLOW=\$(printf '\\033[1;33m')
+HELPER_RED=\$(printf '\\033[0;31m')
+HELPER_CYAN=\$(printf '\\033[0;36m')
+HELPER_PURPLE=\$(printf '\\033[0;35m')
+HELPER_NC=\$(printf '\\033[0m') # No Color
+
+# Script metadata
+SCRIPT_NAME='${script_name}'
+SCRIPT_DESCRIPTION='${description}'
+SCRIPT_VERSION='1.0.0'
+
+# --- Main Script Function ---
+# Acts as the entry point, replacing any previous alias.
+# *** MODIFIED LINE: Added 'function' keyword ***
+function ${script_name} {
+    local cmd=\"\$1\" # Capture the first argument as the command
+    # Shift arguments only if a command was actually passed
+    if [ -n \"\$cmd\" ]; then
+       shift
+    fi
+
+    case \"\$cmd\" in
+        help|--help|-h)
+            show_help
+            return 0
+            ;;
+        version|--version|-v)
+            show_version
+            return 0
+            ;;
+        menu|--menu|-m)
+            show_menu
+            return 0
+            ;;
+        \"\"|null) # Handle empty command explicitly
+"
+  # Define default action (run original alias command or show menu)
+  if [ -n "$alias_cmd" ]; then
+      helper_template+="
+            printf \"\${HELPER_CYAN}Running default command...${HELPER_NC}\\n\"
+            ${alias_cmd} \"\$@\" # Pass remaining arguments to original command
+            return \$?
+            ;;"
+  else
+      helper_template+="
+            show_menu # Show menu if no default command exists
+            return 0
+            ;;"
+  fi
+
+  # Add case statements ONLY if commands were provided
+  if [ $num_commands -gt 0 ]; then
+      for cmd in "${COMMANDS[@]}"; do
+          helper_template+="
+        ${cmd})
+            # Call the specific function for this command
+            ${cmd}_command \"\$@\" # Pass remaining arguments
+            return \$?
+            ;;"
+      done
+  fi
+
+  helper_template+="
+        *) # Handle unknown commands
+            if [ -n \"\$cmd\" ]; then # Check if something was actually entered
+                printf \"\${HELPER_RED}❌ Unknown command: %s${HELPER_NC}\\n\" \"\$cmd\" >&2 # Print error to stderr
+                printf \"Run '%s help' for usage information\\n\" \"\${SCRIPT_NAME}\" >&2
+                return 1 # Return error code
+            else
+                # This case should ideally not be reached due to the \"\"|null case above
+                # but acts as a fallback. Reverts to default behavior.
+"
+  # Fallback default action within *) case
+  if [ -n "$alias_cmd" ]; then
+      helper_template+="
+                printf \"\${HELPER_CYAN}Running default command...${HELPER_NC}\\n\"
+                ${alias_cmd} \"\$@\"
+                return \$?"
+  else
+      helper_template+="
+                show_menu
+                return 0"
+  fi
+
+  helper_template+="
+            fi
+            ;;
+    esac
+} # *** End of function ${script_name} ***
+
+# --- Help Function ---
+show_help() {
+    printf \"\${HELPER_BLUE}┌─────────────────────────────────────┐\${HELPER_NC}\\n\"
+    printf \"\${HELPER_BLUE}│       %s - Help Guide       │${HELPER_NC}\\n\" \"\${SCRIPT_NAME}\"
+    printf \"\${HELPER_BLUE}└─────────────────────────────────────┘${HELPER_NC}\\n\\n\"
+
+    printf \"\${HELPER_GREEN}📋 Description:${HELPER_NC}\\n\"
+    printf \"  %s\\n\\n\" \"\${SCRIPT_DESCRIPTION}\"
+
+    printf \"\${HELPER_GREEN}🔧 Commands:${HELPER_NC}\\n\"
+"
+  # Show default command help if alias existed
+  if [ -n "$alias_cmd" ]; then
+      helper_template+="
+    printf \"  \${HELPER_YELLOW}(default)${HELPER_NC}  Run the original command (%s)\\n\" \"${alias_cmd}\""
+  else
+      helper_template+="
+    printf \"  \${HELPER_YELLOW}(default)${HELPER_NC}  Show the interactive menu\\n\""
+  fi
+
+  # Add help lines ONLY if commands were provided
+  if [ $num_commands -gt 0 ]; then
+      for cmd in "${COMMANDS[@]}"; do
+          helper_template+="
+    printf \"  \${HELPER_YELLOW}%-10s\${HELPER_NC} Execute the '%s' command\\n\" \"${cmd}\" \"${cmd}\"" # Formatted output
+      done
+  fi
+
+  helper_template+="
+
+    printf \"\\n\${HELPER_GREEN}🛠️  Options:\${HELPER_NC}\\n\"
+    printf \"  \${HELPER_YELLOW}%-20s\${HELPER_NC} Show this help message\\n\" \"help, --help, -h\"
+    printf \"  \${HELPER_YELLOW}%-20s\${HELPER_NC} Show version information\\n\" \"version, --version, -v\"
+    printf \"  \${HELPER_YELLOW}%-20s\${HELPER_NC} Show interactive menu\\n\" \"menu, --menu, -m\"
+
+    printf \"\\n\${HELPER_GREEN}📚 Examples:\${HELPER_NC}\\n\"
+    printf \"  %s              # Run the default command or show menu\\n\" \"\${SCRIPT_NAME}\"
+"
+  # Add example lines ONLY if commands were provided
+  if [ $num_commands -gt 0 ]; then
+      for cmd in "${COMMANDS[@]}"; do
+          helper_template+="
+    printf \"  %s %-10s # Execute the '%s' command\\n\" \"\${SCRIPT_NAME}\" \"${cmd}\" \"${cmd}\""
+      done
+  fi
+
+  helper_template+="
+
+    printf \"\\n\${HELPER_YELLOW}💡 Tip:${HELPER_NC} Use '%s menu' for an interactive experience.\\n\" \"\${SCRIPT_NAME}\"
+}
+
+# --- Version Function ---
+show_version() {
+    printf \"\${HELPER_BLUE}📦 %s v%s\${HELPER_NC}\\n\" \"\${SCRIPT_NAME}\" \"\${SCRIPT_VERSION}\"
+}
+
+# --- Interactive Menu Function ---
+show_menu() {
+    local choice
+    local i=1 # Counter for menu items
+
+    while true; do
+        # Use 'clear' command if available, otherwise print newlines
+        if command -v clear > /dev/null; then clear; else printf '\\n\\n\\n'; fi
+
+        printf \"\${HELPER_BLUE}┌─────────────────────────────────────┐\${HELPER_NC}\\n\"
+        printf \"\${HELPER_BLUE}│      %s - Main Menu       │${HELPER_NC}\\n\" \"\${SCRIPT_NAME}\"
+        printf \"\${HELPER_BLUE}└─────────────────────────────────────┘${HELPER_NC}\\n\\n\"
+
+        printf \"\${HELPER_GREEN}Available options:${HELPER_NC}\\n\\n\"
+"
+  # Add default command option if alias existed
+  if [ -n "$alias_cmd" ]; then
+      helper_template+="
+        printf \"  \${HELPER_YELLOW}0)\${HELPER_NC} Run default command (%s)\\n\" \"\${alias_cmd}\""
+  fi
+
+  # Reset counter
+  i=1
+  # Add menu items ONLY if commands were provided
+  if [ $num_commands -gt 0 ]; then
+      for cmd in "${COMMANDS[@]}"; do
+          helper_template+="
+        printf \"  \${HELPER_YELLOW}%d)\${HELPER_NC} %s\\n\" \"\$i\" \"${cmd}\""
+          ((i++)) # Increment counter
+      done
+  fi
+
+  helper_template+="
+        printf \"\\n\" # Add spacing
+        printf \"  \${HELPER_YELLOW}h)\${HELPER_NC} Help\\n\"
+        printf \"  \${HELPER_YELLOW}q)\${HELPER_NC} Quit\\n\\n\"
+
+        # Prompt for user choice
+        printf \"\${HELPER_CYAN}Please choose an option: \${HELPER_NC}\"
+        read -r choice # Read user input safely
+
+        case \"\$choice\" in
+"
+  # Add case for default command if alias existed
+  if [ -n "$alias_cmd" ]; then
+      helper_template+="
+            0)
+                ${alias_cmd} # Execute original command (arguments not passed in menu mode)
+                press_enter
+                ;;
+"
+  fi
+
+  # Reset counter
+  i=1
+  # Add menu cases ONLY if commands were provided
+  if [ $num_commands -gt 0 ]; then
+      for cmd in "${COMMANDS[@]}"; do
+          helper_template+="
+            \$i)
+                ${cmd}_command # Execute command function (arguments not passed in menu mode)
+                press_enter
+                ;;
+"
+          ((i++)) # Increment counter
+      done
+  fi
+
+  helper_template+="
+            h|H)
+                if command -v clear > /dev/null; then clear; else printf '\\n\\n\\n'; fi
+                show_help
+                press_enter
+                ;;
+            q|Q)
+                printf \"\${HELPER_GREEN}👋 Goodbye!\${HELPER_NC}\\n\"
+                return 0 # Return from the menu function
+                ;;
+            *)
+                printf \"\${HELPER_RED}❌ Invalid option '%s'\${HELPER_NC}\\n\" \"\$choice\"
+                press_enter
+                ;;
+        esac
+    done
+}
+
+# --- Utility function for menu ---
+# Pauses execution until user presses Enter
+press_enter() {
+    printf \"\\n\${HELPER_YELLOW}Press Enter to continue...\${HELPER_NC}\"
+    read -r # Wait for user input
+}
+"
+
+  # Add function stubs ONLY if commands were provided
+  if [ $num_commands -gt 0 ]; then
+      for cmd in "${COMMANDS[@]}"; do
+          helper_template+="
+
+# --- Function for '${cmd}' command ---
+# Add your specific logic for the '${cmd}' command here.
+# Arguments passed to the main script function after the command
+# (e.g., '\${script_name} ${cmd} arg1 arg2') are available as \$1, \$2, etc.
+${cmd}_command() {
+    printf \"\${HELPER_CYAN}🔄 Executing '${cmd}' command...${HELPER_NC}\\n\"
+    # Example: Accessing arguments
+    # if [ -n \"\$1\" ]; then
+    #    printf \"Argument 1: %s\\n\" \"\$1\"
+    # fi
+    # --- Add your logic for ${cmd} below ---
+
+    printf \"\${HELPER_YELLOW}🚧 Placeholder for '${cmd}' command logic.${HELPER_NC}\\n\"
+
+    # --- End of logic for ${cmd} ---
+}"
+      done
+  fi
+
+  helper_template+="
+
+# Export the main function so it's available when sourced
+export -f ${script_name}
+
+# Optional: Add alias for convenience if desired (can conflict if script sourced multiple times)
+# alias ${script_name}=${script_name}
+
+printf \"\${HELPER_GREEN}Helper setup complete for '%s'.${HELPER_NC}\\n\" \"\${SCRIPT_NAME}\"
+# End of generated content
+"
+
+  # --- Write to File ---
+  # Backup the original file
+  backup_file="${target_file}.backup.$(date +%Y%m%d%H%M%S)"
+  if cp "$target_file" "$backup_file"; then
+      echo -e "${GREEN}✅ File backed up to ${backup_file}${NC}"
+      # Schedule cleanup in background
+      (sleep 300; cleanup_old_backups "$target_file") &
+  else
+      echo -e "${RED}⚠️  Warning: Failed to create backup of ${target_file}${NC}" >&2
+  fi
+
+  # Write the new content using printf for safety
+  if printf "%s" "$helper_template" > "$target_file"; then
+      # Make file executable
+      chmod +x "$target_file"
+      echo -e "${GREEN}✅ Enhanced helper menu added to ${target_file}${NC}"
+
+      # Display success message and available commands
+      echo -e "${BLUE}ℹ️  Available commands for the enhanced script '${script_name}':${NC}"
+      echo -e "   ${YELLOW}${script_name}${NC}           - Run default command or show menu"
+      echo -e "   ${YELLOW}${script_name} help${NC}     - Show help menu"
+      echo -e "   ${YELLOW}${script_name} version${NC}  - Show version"
+      echo -e "   ${YELLOW}${script_name} menu${NC}     - Show interactive menu"
+      # List commands ONLY if they exist
+      if [ $num_commands -gt 0 ]; then
+          for cmd in "${COMMANDS[@]}"; do
+              echo -e "   ${YELLOW}${script_name} ${cmd}${NC}"
+          done
+      fi
+      echo -e "${BLUE}ℹ️  Run 'source ${target_file}' or '. ${target_file}' to load the new '${script_name}' function.${NC}"
+
+  else
+      echo -e "${RED}❌ Error: Failed to write helper menu to ${target_file}${NC}" >&2
+      return 1
+  fi
+}
+
+# --- Execution / Alias Setup ---
+# Create alias 'create-helper' if running in an interactive shell
+if [[ $- == *i* ]]; then
+  alias create-helper='create_helper'
+fi
+
+# Allow direct execution
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  create_helper "$@" # Pass all arguments to the function
+fi
